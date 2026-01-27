@@ -1,12 +1,12 @@
-export interface OrderItem {
-    productId: string;
-    quantity: number;
-}
+import { CartItem } from './cartItem';
 
 export interface Order {
+    id: string;
     userId: string;
-    items: OrderItem[];
+    items: CartItem[];
     totalPrice: number;
-    orderDate: Date;
+    date: Date;
     status: 'pending' | 'completed' | 'canceled';
+    customerName?: string;
+    customerPhone?: string;
 }

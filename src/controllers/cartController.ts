@@ -10,22 +10,42 @@ export class CartController {
     }
 
     public async addItem(ctx: Context, item: CartItem): Promise<void> {
-        await this.cartService.addItem(ctx.from.id, item);
+        const userId = ctx.from?.id;
+        if (!userId) {
+            await ctx.reply('Xato yuz berdi.');
+            return;
+        }
+        this.cartService.addItem(userId, item);
         await ctx.reply('Tovar savatchaga qo\'shildi.');
     }
 
-    public async updateItemQuantity(ctx: Context, itemId: string, quantity: number): Promise<void> {
-        await this.cartService.updateItemQuantity(ctx.from.id, itemId, quantity);
+    public async updateItemQuantity(ctx: Context, productId: string, quantity: number): Promise<void> {
+        const userId = ctx.from?.id;
+        if (!userId) {
+            await ctx.reply('Xato yuz berdi.');
+            return;
+        }
+        this.cartService.updateItemQuantity(userId, productId, quantity);
         await ctx.reply('Miqdor yangilandi.');
     }
 
-    public async removeItem(ctx: Context, itemId: string): Promise<void> {
-        await this.cartService.removeItem(ctx.from.id, itemId);
+    public async removeItem(ctx: Context, productId: string): Promise<void> {
+        const userId = ctx.from?.id;
+        if (!userId) {
+            await ctx.reply('Xato yuz berdi.');
+            return;
+        }
+        this.cartService.removeItem(userId, productId);
         await ctx.reply('Tovar savatchadan o\'chirildi.');
     }
 
     public async viewCart(ctx: Context): Promise<void> {
-        const cartItems = await this.cartService.getCartItems(ctx.from.id);
+        const userId = ctx.from?.id;
+        if (!userId) {
+            await ctx.reply('Xato yuz berdi.');
+            return;
+        }
+        const cartItems = this.cartService.getCartItems(userId);
         if (cartItems.length === 0) {
             await ctx.reply('Savatchangiz bo\'sh.');
             return;
@@ -35,8 +55,9 @@ export class CartController {
         let totalPrice = 0;
 
         cartItems.forEach(item => {
-            message += `${item.productName} - ${item.quantity} ${item.unit} - ${item.price} so\'m\n`;
-            totalPrice += item.price * item.quantity;
+            const itemTotal = (item.price || 0) * item.quantity;
+            message += `${item.productName || item.productId} - ${item.quantity} ${item.unit || 'dona'} - ${item.price || 0} so\'m\n`;
+            totalPrice += itemTotal;
         });
 
         message += `Umumiy narx: ${totalPrice} so\'m`;

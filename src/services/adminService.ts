@@ -1,44 +1,50 @@
 import { Admin } from '../models/admin';
-import { Database } from '../db/index';
 
 export class AdminService {
-    private db: Database;
-
-    constructor() {
-        this.db = new Database();
-    }
+    private admins: Admin[] = [];
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {
-        const newAdmin = new Admin(name, telegramId);
-        await this.db.saveAdmin(newAdmin);
+        const newAdmin: Admin = {
+            id: (this.admins.length + 1).toString(),
+            name,
+            telegramId,
+            adminSince: new Date(),
+        };
+        this.admins.push(newAdmin);
         return newAdmin;
     }
 
-    async editAdmin(telegramId: string, updatedData: Partial<Admin>): Promise<Admin | null> {
-        const admin = await this.db.findAdminByTelegramId(telegramId);
-        if (admin) {
-            Object.assign(admin, updatedData);
-            await this.db.updateAdmin(admin);
-            return admin;
-        }
-        return null;
-    }
-
-    async deleteAdmin(telegramId: string): Promise<boolean> {
-        const result = await this.db.deleteAdmin(telegramId);
-        return result;
-    }
-
     async getAdmin(telegramId: string): Promise<Admin | null> {
-        return await this.db.findAdminByTelegramId(telegramId);
-    }
-
-    async listAdmins(): Promise<Admin[]> {
-        return await this.db.getAllAdmins();
+        return this.admins.find(a => a.telegramId === telegramId) || null;
     }
 
     async isAdmin(telegramId: string): Promise<boolean> {
-        const admin = await this.db.findAdminByTelegramId(telegramId);
-        return admin !== null;
+        return this.admins.some(a => a.telegramId === telegramId);
+    }
+
+    async listAdmins(): Promise<Admin[]> {
+        return this.admins;
+    }
+
+    async getStatistics(): Promise<string> {
+        return 'Statistika: 0 buyurtma, 0 so\'m daromad';
+    }
+
+    async getUsers(): Promise<string> {
+        return 'Foydalanuvchilar: 0';
+    }
+
+    async addProduct(productData: any): Promise<{ message: string }> {
+        return { message: 'Tovar qo\'shildi' };
+    }
+
+    async editProduct(productId: string, updatedData: any): Promise<{ message: string }> {
+        return { message: 'Tovar tahrirlandi' };
+    }
+
+    async deleteProduct(productId: string): Promise<{ message: string }> {
+        return { message: 'Tovar o\'chirildi' };
     }
 }
+
+export default AdminService;

@@ -1,40 +1,43 @@
 import { CartItem } from '../models/cartItem';
 
 export class CartService {
-    private cart: CartItem[] = [];
+    private carts: Map<number, CartItem[]> = new Map();
 
-    addItem(productId: string, quantity: number): void {
-        const existingItem = this.cart.find(item => item.productId === productId);
+    addItem(userId: number, item: CartItem): void {
+        const cart = this.carts.get(userId) || [];
+        const existingItem = cart.find(i => i.productId === item.productId);
         if (existingItem) {
-            existingItem.quantity += quantity;
+            existingItem.quantity += item.quantity;
         } else {
-            this.cart.push({ productId, quantity });
+            cart.push(item);
+        }
+        this.carts.set(userId, cart);
+    }
+
+    updateItemQuantity(userId: number, productId: string, quantity: number): void {
+        const cart = this.carts.get(userId) || [];
+        const item = cart.find(i => i.productId === productId);
+        if (item) {
+            item.quantity = quantity;
         }
     }
 
-    updateItem(productId: string, quantity: number): void {
-        const existingItem = this.cart.find(item => item.productId === productId);
-        if (existingItem) {
-            existingItem.quantity = quantity;
-        }
+    removeItem(userId: number, productId: string): void {
+        const cart = this.carts.get(userId) || [];
+        const filtered = cart.filter(i => i.productId !== productId);
+        this.carts.set(userId, filtered);
     }
 
-    removeItem(productId: string): void {
-        this.cart = this.cart.filter(item => item.productId !== productId);
+    getCartItems(userId: number): CartItem[] {
+        return this.carts.get(userId) || [];
     }
 
-    getCartItems(): CartItem[] {
-        return this.cart;
+    calculateTotal(userId: number): number {
+        const cart = this.carts.get(userId) || [];
+        return cart.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
     }
 
-    calculateTotal(prices: Record<string, number>): number {
-        return this.cart.reduce((total, item) => {
-            const price = prices[item.productId] || 0;
-            return total + price * item.quantity;
-        }, 0);
-    }
-
-    clearCart(): void {
-        this.cart = [];
+    clearCart(userId: number): void {
+        this.carts.set(userId, []);
     }
 }

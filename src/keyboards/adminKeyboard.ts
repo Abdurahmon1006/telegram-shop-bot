@@ -1,20 +1,18 @@
-import { InlineKeyboardMarkup, InlineKeyboardButton } from 'telegraf';
+import { Markup } from 'telegraf';
 
-const adminKeyboard: InlineKeyboardMarkup = {
-    inline_keyboard: [
-        [
-            { text: '➕ Tovar qo‘shish', callback_data: 'add_product' },
-            { text: '✏️ Tovar tahrirlash', callback_data: 'edit_product' },
-            { text: '❌ Tovar o‘chirish', callback_data: 'delete_product' },
-        ],
-        [
-            { text: '📦 Buyurtmalar', callback_data: 'view_orders' },
-            { text: '📊 Statistika', callback_data: 'view_statistics' },
-        ],
-        [
-            { text: '🔙 Orqaga', callback_data: 'back_to_main' },
-        ],
+export const adminKeyboard = Markup.inlineKeyboard([
+    [
+        Markup.button.callback('➕ Tovar qo\'shish', 'add_product'),
+        Markup.button.callback('✏️ Tovar tahrirlash', 'edit_product'),
     ],
-};
+    [
+        Markup.button.callback('❌ Tovar o\'chirish', 'delete_product'),
+        Markup.button.callback('📦 Buyurtmalar', 'view_orders'),
+    ],
+    [
+        Markup.button.callback('📊 Statistika', 'view_statistics'),
+        Markup.button.callback('🔙 Orqaga', 'back_to_main'),
+    ],
+]);
 
 export default adminKeyboard;
