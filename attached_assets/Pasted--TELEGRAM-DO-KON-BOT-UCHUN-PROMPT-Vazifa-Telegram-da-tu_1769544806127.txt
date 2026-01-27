@@ -1,0 +1,202 @@
+📌 TELEGRAM DO‘KON BOT UCHUN PROMPT
+
+Vazifa:
+Telegram’da tugmalar (inline / reply keyboard) orqali ishlaydigan do‘kon boti yaratilsin.
+
+👤 FOYDALANUVCHI FUNKSIYALARI
+
+Asosiy menyu tugmalari:
+
+🛒 Tovarlar
+
+🧺 Savatcha
+
+📍 Bizning manzil
+
+📞 Aloqa
+
+📦 Buyurtmalar tarixi
+
+🛒 Tovarlar bo‘limi:
+
+Tovar turlari (kategoriya)
+
+Tovarlar ro‘yxati
+
+Tovar tanlanganda quyidagilar ko‘rinsin:
+
+Tovar nomi
+
+Tavsifi
+
+Rasmi
+
+Narxi (har doim “so‘m” bilan)
+
+O‘lchov birligi (dona, kg, litr, qop va h.k.)
+
+Foydalanuvchi miqdorni tanlay olsin (masalan: 1 kg, 2 dona)
+
+➕ Savatchaga qo‘shish tugmasi bo‘lsin
+
+🧺 Savatcha:
+
+Qo‘shilgan tovarlar ro‘yxati
+
+Har bir tovar uchun:
+
+Miqdorni o‘zgartirish
+
+O‘chirish
+
+Umumiy summa avtomatik hisoblanishi
+
+✅ Buyurtma berish tugmasi
+
+📍 Bizning manzil:
+Tugma bosilganda shu matn chiqsin:
+
+📍 Bizning manzil:
+https://maps.app.goo.gl/e8YrtQDoaKWuLq6o7
+
+
+📞 Aloqa:
+Tugma bosilganda:
+
+📞 Telefon: +998901234567
+📨 Telegram: @username
+
+
+✅ Buyurtma berishda:
+
+Foydalanuvchidan:
+
+Ism
+
+Telefon raqam (namuna: +998901234567)
+
+Buyurtmadan so‘ng foydalanuvchiga xabar:
+
+✅ Rahmat! Buyurtmangiz qabul qilindi.
+Tez orada xodimlarimiz siz bilan bog‘lanadi.
+To‘lov, yetkazib berish va qayerdan olib ketish haqida ma’lumot beriladi.
+
+
+📦 Buyurtmalar tarixi:
+
+Sana
+
+Tovarlar
+
+Miqdor
+
+Umumiy narx
+
+🧑‍💼 ADMIN FUNKSIYALARI
+
+Admin tizimi:
+
+Maxsus admin kod orqali admin bo‘lish
+
+Bot adminni eslab qolsin:
+
+Ismi
+
+Telegram ID
+
+Admin bo‘lgan sana
+
+Admin panel:
+
+➕ Tovar qo‘shish
+
+✏️ Tovar tahrirlash
+
+❌ Tovar o‘chirish
+
+Tovar sonini o‘zgartirish uchun alohida panel:
+
++1 / -1
+
++5 / -5
+
++10 / -10
+
+O‘lchov birliklari:
+
+Admin yangi birlik qo‘sha olsin (kg, litr, qop va boshqalar)
+
+O‘chira olsin
+
+Hammasi bazada saqlansin
+
+Manzil va aloqa:
+
+Admin manzil va aloqa ma’lumotlarini:
+
+Qo‘shsin
+
+Tahrirlasin
+
+O‘chirsin
+
+Dam olish kunlari:
+
+Admin belgilay olsin:
+
+Bugun uchun
+
+Ma’lum muddatga
+
+Doimiy
+
+Dam olish kuni bo‘lsa foydalanuvchiga xabar chiqsin:
+
+🚫 Bugun dam olish kuni.
+Ish kuni: __.__.____
+Iltimos, shu sanada qayta murojaat qiling.
+
+
+Buyurtmalar (admin uchun):
+
+Buyurtmalar ro‘yxati tugma orqali
+
+Har bir buyurtmada:
+
+Ism
+
+Telefon raqam
+
+Tovarlar
+
+Miqdor
+
+Narx
+
+Statistika va hisobotlar:
+
+Kunlik
+
+Oylik
+
+Yillik
+
+Sotilgan tovarlar soni va jami summa
+
+Ombor (stock):
+
+Tovar sotilganda soni avtomatik kamayishi
+
+Admin qo‘lda sonini o‘zgartira olishi
+
+⚙️ TEXNIK TALABLAR
+
+Tugmalar orqali boshqarish
+
+Ma’lumotlar bazada saqlansin
+
+Telegram Bot API ishlatilsin
+
+Xabarlar o‘zbek tilida bo‘lsin
+
+Tizim barqaror va tushunarli bo‘lsin
