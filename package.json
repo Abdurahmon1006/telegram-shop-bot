@@ -1,0 +1,30 @@
+{
+  "name": "telegram-shop-bot",
+  "version": "1.0.0",
+  "description": "A Telegram bot for managing a shop with user and admin functionalities.",
+  "main": "src/bot.ts",
+  "scripts": {
+    "start": "ts-node src/bot.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.50.0",
+    "typescript": "^4.5.4",
+    "dotenv": "^10.0.0",
+    "mongoose": "^6.0.0"
+  },
+  "devDependencies": {
+    "ts-jest": "^27.0.0",
+    "jest": "^27.0.0",
+    "@types/jest": "^27.0.0",
+    "@types/node": "^16.0.0"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "shop",
+    "ecommerce"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
