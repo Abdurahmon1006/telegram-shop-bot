@@ -10,7 +10,10 @@ export const adminKeyboard = Markup.inlineKeyboard([
         Markup.button.callback('📦 Buyurtmalar', 'view_orders'),
     ],
     [
+        Markup.button.callback('📁 Turkumlar', 'manage_categories'),
         Markup.button.callback('📊 Statistika', 'view_statistics'),
+    ],
+    [
         Markup.button.callback('🔙 Orqaga', 'back_to_main'),
     ],
 ]);

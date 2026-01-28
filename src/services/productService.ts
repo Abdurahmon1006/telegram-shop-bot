@@ -1,46 +1,74 @@
-import { Product } from '../models/product';
+import { Product, Category } from '../models/product';
+
+const sampleCategories: Category[] = [
+    { id: '1', name: 'Mevalar' },
+    { id: '2', name: 'Sabzavotlar' },
+];
 
 const sampleProducts: Product[] = [
-    { id: '1', name: 'Olma', description: 'Yangi olma', price: 15000, unit: 'kg', stock: 100 },
-    { id: '2', name: 'Banan', description: 'Import banan', price: 25000, unit: 'kg', stock: 50 },
-    { id: '3', name: 'Uzum', description: 'Mahalliy uzum', price: 20000, unit: 'kg', stock: 75 },
+    { id: '1', name: 'Olma', description: 'Yangi olma', price: 15000, unit: 'kg', stock: 100, categoryId: '1' },
+    { id: '2', name: 'Banan', description: 'Import banan', price: 25000, unit: 'kg', stock: 50, categoryId: '1' },
+    { id: '3', name: 'Uzum', description: 'Mahalliy uzum', price: 20000, unit: 'kg', stock: 75, categoryId: '1' },
 ];
 
 export class ProductService {
-    private products: Product[] = [...sampleProducts];
+    private static products: Product[] = [...sampleProducts];
+    private static categories: Category[] = [...sampleCategories];
 
     async createProduct(productData: Partial<Product>): Promise<Product> {
         const newProduct: Product = {
-            id: (this.products.length + 1).toString(),
+            id: (ProductService.products.length + 1).toString(),
             name: productData.name || '',
             description: productData.description || '',
             price: productData.price || 0,
             unit: productData.unit || 'dona',
             stock: productData.stock || 0,
+            categoryId: productData.categoryId || '0',
         };
-        this.products.push(newProduct);
+        ProductService.products.push(newProduct);
         return newProduct;
     }
 
     async getProductById(productId: string): Promise<Product | null> {
-        return this.products.find(p => p.id === productId) || null;
+        return ProductService.products.find(p => p.id === productId) || null;
     }
 
     async getAllProducts(): Promise<Product[]> {
-        return this.products;
+        return ProductService.products;
+    }
+
+    async getProductsByCategory(categoryId: string): Promise<Product[]> {
+        return ProductService.products.filter(p => p.categoryId === categoryId);
+    }
+
+    async getAllCategories(): Promise<Category[]> {
+        return ProductService.categories;
+    }
+
+    async addCategory(name: string): Promise<Category> {
+        const newCategory = { id: (ProductService.categories.length + 1).toString(), name };
+        ProductService.categories.push(newCategory);
+        return newCategory;
+    }
+
+    async deleteCategory(id: string): Promise<boolean> {
+        const index = ProductService.categories.findIndex(c => c.id === id);
+        if (index === -1) return false;
+        ProductService.categories.splice(index, 1);
+        return true;
     }
 
     async updateProduct(productId: string, productData: Partial<Product>): Promise<Product | null> {
-        const index = this.products.findIndex(p => p.id === productId);
+        const index = ProductService.products.findIndex(p => p.id === productId);
         if (index === -1) return null;
-        this.products[index] = { ...this.products[index], ...productData };
-        return this.products[index];
+        ProductService.products[index] = { ...ProductService.products[index], ...productData };
+        return ProductService.products[index];
     }
 
     async deleteProduct(productId: string): Promise<boolean> {
-        const index = this.products.findIndex(p => p.id === productId);
+        const index = ProductService.products.findIndex(p => p.id === productId);
         if (index === -1) return false;
-        this.products.splice(index, 1);
+        ProductService.products.splice(index, 1);
         return true;
     }
 

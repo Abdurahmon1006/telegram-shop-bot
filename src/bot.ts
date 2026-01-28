@@ -4,10 +4,10 @@ import { adminCommands } from './commands/adminCommands';
 import config from './config';
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name';
     name?: string;
     phone?: string;
-    newProduct?: Partial<{ name: string; price: number }>;
+    newProduct?: Partial<{ name: string; price: number; categoryId: string }>;
 }
 
 interface MyContext extends Context {
@@ -61,17 +61,17 @@ bot.on('message', async (ctx, next) => {
         if (isNaN(price)) {
             return ctx.reply('❌ Iltimos, narxni raqamda kiriting:');
         }
-        const productData = {
-            ...ctx.session.newProduct,
-            price: price,
-            description: 'Yangi mahsulot',
-            unit: 'dona',
-            stock: 100
-        };
-        await adminCommands.addProduct(ctx, productData);
+        ctx.session.newProduct!.price = price;
+        const categories = await new ProductService().getAllCategories();
+        const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_set_cat_${cat.id}`)]);
+        ctx.session.state = 'admin_awaiting_product_category';
+        return ctx.reply('📁 Turkumni tanlang:', Markup.inlineKeyboard(buttons));
+    }
+
+    if (ctx.session.state === 'admin_awaiting_category_name' && 'text' in ctx.message) {
+        await new ProductService().addCategory(ctx.message.text);
         ctx.session.state = undefined;
-        ctx.session.newProduct = undefined;
-        return;
+        return ctx.reply('✅ Yangi turkum qo\'shildi!');
     }
 
     return next();
@@ -80,10 +80,35 @@ bot.on('message', async (ctx, next) => {
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
     const data = (ctx.callbackQuery as any).data;
-    if (data.startsWith('add_') && !data.includes('product')) {
+    if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
         const parts = data.split('_');
         const qty = parseInt(parts[1]);
         await ctx.answerCbQuery(`${qty} dona savatchaga qo'shildi!`);
+    } else if (data.startsWith('cat_')) {
+        const catId = data.split('_')[1];
+        const products = await new ProductService().getProductsByCategory(catId);
+        if (products.length === 0) {
+            await ctx.reply('Ushbu turkumda mahsulotlar yo\'q.');
+        } else {
+            for (const product of products) {
+                const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}`;
+                await ctx.reply(caption, productKeyboard(product.id));
+            }
+        }
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('admin_set_cat_')) {
+        const catId = data.split('_')[3];
+        const productData = {
+            ...ctx.session.newProduct,
+            categoryId: catId,
+            description: 'Yangi mahsulot',
+            unit: 'dona',
+            stock: 100
+        };
+        await adminCommands.addProduct(ctx, productData);
+        ctx.session.state = undefined;
+        ctx.session.newProduct = undefined;
+        await ctx.answerCbQuery();
     } else if (data === 'add_product') {
         ctx.session = ctx.session || {};
         ctx.session.state = 'admin_awaiting_product_name';
@@ -98,6 +123,17 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data === 'view_statistics') {
         await adminCommands.viewStatistics(ctx);
+        await ctx.answerCbQuery();
+    } else if (data === 'manage_categories') {
+        const buttons = [
+            [Markup.button.callback('➕ Yangi turkum', 'add_category')],
+            [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
+        ];
+        await ctx.reply('Turkumlarni boshqarish:', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data === 'add_category') {
+        ctx.session.state = 'admin_awaiting_category_name';
+        await ctx.reply('📝 Yangi turkum nomini kiriting:');
         await ctx.answerCbQuery();
     } else if (data === 'checkout') {
         ctx.session = ctx.session || {};

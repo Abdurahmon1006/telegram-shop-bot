@@ -5,4 +5,10 @@ export interface Product {
     price: number;
     unit: string;
     stock: number;
+    categoryId: string;
+}
+
+export interface Category {
+    id: string;
+    name: string;
 }

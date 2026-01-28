@@ -10,11 +10,9 @@ const orderService = new OrderService();
 
 export const userCommands = {
     viewProducts: async (ctx: Context) => {
-        const products = await productService.getAllProducts();
-        for (const product of products) {
-            const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}`;
-            await ctx.reply(caption, productKeyboard(product.id));
-        }
+        const categories = await productService.getAllCategories();
+        const buttons = categories.map(cat => [Markup.button.callback(cat.name, `cat_${cat.id}`)]);
+        await ctx.reply('Turkumni tanlang:', Markup.inlineKeyboard(buttons));
     },
 
     viewCart: async (ctx: Context) => {
