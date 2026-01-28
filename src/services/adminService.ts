@@ -27,7 +27,12 @@ export class AdminService {
     }
 
     async getStatistics(): Promise<string> {
-        return 'Statistika: 0 buyurtma, 0 so\'m daromad';
+        const productService = new (require('./productService').ProductService)();
+        const products = await productService.getAllProducts();
+        return `📊 Statistika:
+- Jami mahsulotlar: ${products.length} ta
+- Jami buyurtmalar: 0 ta
+- Jami daromad: 0 so'm`;
     }
 
     async getUsers(): Promise<string> {

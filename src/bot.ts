@@ -89,6 +89,16 @@ bot.on('callback_query', async (ctx) => {
         ctx.session.state = 'admin_awaiting_product_name';
         await ctx.answerCbQuery();
         await ctx.reply('📝 Tovar nomini kiriting:');
+    } else if (data === 'edit_product') {
+        await ctx.answerCbQuery('Hali amalga oshirilmadi (Sizda tahrirlash huquqi yo\'q)');
+    } else if (data === 'delete_product') {
+        await ctx.answerCbQuery('Hali amalga oshirilmadi');
+    } else if (data === 'view_orders') {
+        await adminCommands.viewOrders(ctx);
+        await ctx.answerCbQuery();
+    } else if (data === 'view_statistics') {
+        await adminCommands.viewStatistics(ctx);
+        await ctx.answerCbQuery();
     } else if (data === 'checkout') {
         ctx.session = ctx.session || {};
         ctx.session.state = 'awaiting_name';
