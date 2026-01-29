@@ -136,6 +136,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('Turkumlarni boshqarish:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'add_category') {
+        ctx.session = ctx.session || {};
         ctx.session.state = 'admin_awaiting_category_name';
         await ctx.reply('📝 Yangi turkum nomini kiriting:');
         await ctx.answerCbQuery();
