@@ -1,7 +1,11 @@
 import { Context, Markup, Telegraf, session } from 'telegraf';
 import { userCommands } from './commands/userCommands';
 import { adminCommands } from './commands/adminCommands';
+import { ProductService } from './services/productService';
+import { productKeyboard } from './keyboards/productKeyboard';
 import config from './config';
+
+const productService = new ProductService();
 
 interface MySession {
     state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name';
@@ -62,14 +66,14 @@ bot.on('message', async (ctx, next) => {
             return ctx.reply('❌ Iltimos, narxni raqamda kiriting:');
         }
         ctx.session.newProduct!.price = price;
-        const categories = await new ProductService().getAllCategories();
+        const categories = await productService.getAllCategories();
         const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_set_cat_${cat.id}`)]);
         ctx.session.state = 'admin_awaiting_product_category';
         return ctx.reply('📁 Turkumni tanlang:', Markup.inlineKeyboard(buttons));
     }
 
     if (ctx.session.state === 'admin_awaiting_category_name' && 'text' in ctx.message) {
-        await new ProductService().addCategory(ctx.message.text);
+        await productService.addCategory(ctx.message.text);
         ctx.session.state = undefined;
         return ctx.reply('✅ Yangi turkum qo\'shildi!');
     }
@@ -86,7 +90,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery(`${qty} dona savatchaga qo'shildi!`);
     } else if (data.startsWith('cat_')) {
         const catId = data.split('_')[1];
-        const products = await new ProductService().getProductsByCategory(catId);
+        const products = await productService.getProductsByCategory(catId);
         if (products.length === 0) {
             await ctx.reply('Ushbu turkumda mahsulotlar yo\'q.');
         } else {
