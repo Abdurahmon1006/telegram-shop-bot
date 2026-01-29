@@ -8,10 +8,11 @@ import config from './config';
 const productService = new ProductService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price';
     name?: string;
     phone?: string;
     newProduct?: Partial<{ name: string; price: number; categoryId: string }>;
+    editingProductId?: string;
 }
 
 interface MyContext extends Context {
@@ -78,6 +79,20 @@ bot.on('message', async (ctx, next) => {
         return ctx.reply('✅ Yangi turkum qo\'shildi!');
     }
 
+    if (ctx.session.state === 'admin_awaiting_edit_product_price' && 'text' in ctx.message) {
+        const price = parseFloat(ctx.message.text);
+        if (isNaN(price)) {
+            return ctx.reply('❌ Iltimos, narxni raqamda kiriting:');
+        }
+        const productId = ctx.session.editingProductId;
+        if (productId) {
+            await productService.updateProduct(productId, { price });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            return ctx.reply('✅ Mahsulot narxi yangilandi!');
+        }
+    }
+
     return next();
 });
 
@@ -119,7 +134,20 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
         await ctx.reply('📝 Tovar nomini kiriting:');
     } else if (data === 'edit_product') {
-        await ctx.answerCbQuery('Hali amalga oshirilmadi (Sizda tahrirlash huquqi yo\'q)');
+        const products = await productService.getAllProducts();
+        if (products.length === 0) {
+            await ctx.answerCbQuery('Mahsulotlar yo\'q');
+            return;
+        }
+        const buttons = products.map(p => [Markup.button.callback(p.name, `admin_edit_p_${p.id}`)]);
+        await ctx.reply('Tahrirlash uchun mahsulotni tanlang:', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('admin_edit_p_')) {
+        const productId = data.split('_')[3];
+        ctx.session.editingProductId = productId;
+        ctx.session.state = 'admin_awaiting_edit_product_price';
+        await ctx.reply('💰 Yangi narxni kiriting:');
+        await ctx.answerCbQuery();
     } else if (data === 'delete_product') {
         await ctx.answerCbQuery('Hali amalga oshirilmadi');
     } else if (data === 'view_orders') {
