@@ -8,7 +8,7 @@ import config from './config';
 const productService = new ProductService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description';
     name?: string;
     phone?: string;
     newProduct?: Partial<{ name: string; price: number; categoryId: string }>;
@@ -89,7 +89,27 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { price });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot narxi yangilandi!');
+            return ctx.reply('✅ Mahsulot narxi yangilandi!', adminCommands.showAdminPanel as any);
+        }
+    }
+
+    if (ctx.session.state === 'admin_awaiting_edit_product_name' && 'text' in ctx.message) {
+        const productId = ctx.session.editingProductId;
+        if (productId) {
+            await productService.updateProduct(productId, { name: ctx.message.text });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            return ctx.reply('✅ Mahsulot nomi yangilandi!', adminCommands.showAdminPanel as any);
+        }
+    }
+
+    if (ctx.session.state === 'admin_awaiting_edit_product_description' && 'text' in ctx.message) {
+        const productId = ctx.session.editingProductId;
+        if (productId) {
+            await productService.updateProduct(productId, { description: ctx.message.text });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            return ctx.reply('✅ Mahsulot tavsifi yangilandi!', adminCommands.showAdminPanel as any);
         }
     }
 
@@ -146,8 +166,45 @@ bot.on('callback_query', async (ctx) => {
         const productId = data.split('_')[3];
         ctx.session = ctx.session || {};
         ctx.session.editingProductId = productId;
-        ctx.session.state = 'admin_awaiting_edit_product_price';
-        await ctx.reply('💰 Yangi narxni kiriting:');
+        const buttons = [
+            [Markup.button.callback('📝 Nomini tahrirlash', `edit_field_name_${productId}`)],
+            [Markup.button.callback('💰 Narxini tahrirlash', `edit_field_price_${productId}`)],
+            [Markup.button.callback('📄 Tavsifini tahrirlash', `edit_field_desc_${productId}`)],
+            [Markup.button.callback('📁 Turkumini tahrirlash', `edit_field_cat_${productId}`)],
+            [Markup.button.callback('🔙 Bekor qilish', 'edit_product')]
+        ];
+        await ctx.reply('Nimani tahrirlamoqchisiz?', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('edit_field_')) {
+        const parts = data.split('_');
+        const field = parts[2];
+        const productId = parts[3];
+        ctx.session.editingProductId = productId;
+        
+        if (field === 'name') {
+            ctx.session.state = 'admin_awaiting_edit_product_name';
+            await ctx.reply('📝 Yangi nomni kiriting:');
+        } else if (field === 'price') {
+            ctx.session.state = 'admin_awaiting_edit_product_price';
+            await ctx.reply('💰 Yangi narxni kiriting:');
+        } else if (field === 'desc') {
+            ctx.session.state = 'admin_awaiting_edit_product_description';
+            await ctx.reply('📄 Yangi tavsifni kiriting:');
+        } else if (field === 'cat') {
+            const categories = await productService.getAllCategories();
+            const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_edit_set_cat_${cat.id}`)]);
+            await ctx.reply('📁 Yangi turkumni tanlang:', Markup.inlineKeyboard(buttons));
+        }
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('admin_edit_set_cat_')) {
+        const catId = data.split('_')[4];
+        const productId = ctx.session.editingProductId;
+        if (productId) {
+            await productService.updateProduct(productId, { categoryId: catId });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            await ctx.reply('✅ Mahsulot turkumi yangilandi!', adminCommands.showAdminPanel as any);
+        }
         await ctx.answerCbQuery();
     } else if (data === 'delete_product') {
         await ctx.answerCbQuery('Hali amalga oshirilmadi');
