@@ -144,6 +144,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data.startsWith('admin_edit_p_')) {
         const productId = data.split('_')[3];
+        ctx.session = ctx.session || {};
         ctx.session.editingProductId = productId;
         ctx.session.state = 'admin_awaiting_edit_product_price';
         await ctx.reply('💰 Yangi narxni kiriting:');
