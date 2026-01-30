@@ -8,7 +8,7 @@ import config from './config';
 const productService = new ProductService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit';
     name?: string;
     phone?: string;
     newProduct?: Partial<{ name: string; price: number; categoryId: string }>;
@@ -113,6 +113,16 @@ bot.on('message', async (ctx, next) => {
         }
     }
 
+    if (ctx.session.state === 'admin_awaiting_edit_product_unit' && 'text' in ctx.message) {
+        const productId = ctx.session.editingProductId;
+        if (productId) {
+            await productService.updateProduct(productId, { unit: ctx.message.text });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            return ctx.reply('✅ Mahsulot birligi yangilandi!', adminCommands.showAdminPanel as any);
+        }
+    }
+
     return next();
 });
 
@@ -170,6 +180,7 @@ bot.on('callback_query', async (ctx) => {
             [Markup.button.callback('📝 Nomini tahrirlash', `edit_field_name_${productId}`)],
             [Markup.button.callback('💰 Narxini tahrirlash', `edit_field_price_${productId}`)],
             [Markup.button.callback('📄 Tavsifini tahrirlash', `edit_field_desc_${productId}`)],
+            [Markup.button.callback('📏 Birligini tahrirlash', `edit_field_unit_${productId}`)],
             [Markup.button.callback('📁 Turkumini tahrirlash', `edit_field_cat_${productId}`)],
             [Markup.button.callback('🔙 Bekor qilish', 'edit_product')]
         ];
@@ -190,6 +201,9 @@ bot.on('callback_query', async (ctx) => {
         } else if (field === 'desc') {
             ctx.session.state = 'admin_awaiting_edit_product_description';
             await ctx.reply('📄 Yangi tavsifni kiriting:');
+        } else if (field === 'unit') {
+            ctx.session.state = 'admin_awaiting_edit_product_unit';
+            await ctx.reply('📏 Yangi o\'lchov birligini kiriting (masalan: kg, dona, litr):');
         } else if (field === 'cat') {
             const categories = await productService.getAllCategories();
             const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_edit_set_cat_${cat.id}`)]);
@@ -207,7 +221,23 @@ bot.on('callback_query', async (ctx) => {
         }
         await ctx.answerCbQuery();
     } else if (data === 'delete_product') {
-        await ctx.answerCbQuery('Hali amalga oshirilmadi');
+        const products = await productService.getAllProducts();
+        if (products.length === 0) {
+            await ctx.answerCbQuery('Mahsulotlar yo\'q');
+            return;
+        }
+        const buttons = products.map(p => [Markup.button.callback(p.name, `admin_del_p_${p.id}`)]);
+        await ctx.reply('O\'chirish uchun mahsulotni tanlang:', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('admin_del_p_')) {
+        const productId = data.split('_')[3];
+        const success = await productService.deleteProduct(productId);
+        if (success) {
+            await ctx.reply('✅ Mahsulot o\'chirildi!');
+        } else {
+            await ctx.reply('❌ Mahsulot topilmadi!');
+        }
+        await ctx.answerCbQuery();
     } else if (data === 'view_orders') {
         await adminCommands.viewOrders(ctx);
         await ctx.answerCbQuery();
