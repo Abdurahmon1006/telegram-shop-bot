@@ -1,7 +1,15 @@
 import { CartItem } from '../models/cartItem';
 
 export class CartService {
+    private static instance: CartService;
     private carts: Map<number, CartItem[]> = new Map();
+
+    constructor() {
+        if (CartService.instance) {
+            return CartService.instance;
+        }
+        CartService.instance = this;
+    }
 
     addItem(userId: number, item: CartItem): void {
         const cart = this.carts.get(userId) || [];

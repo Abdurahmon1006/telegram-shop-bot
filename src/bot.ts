@@ -353,11 +353,21 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
         ctx.session.state = 'admin_awaiting_address';
-        await ctx.reply('📍 Yangi manzilni kiriting:');
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
+        ]);
+        await ctx.reply('📍 Yangi manzilni kiriting:', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'edit_contact_info') {
         ctx.session.state = 'admin_awaiting_contact';
-        await ctx.reply('📞 Yangi aloqa ma\'lumotlarini kiriting (masalan: +998... @username):');
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
+        ]);
+        await ctx.reply('📞 Yangi aloqa ma\'lumotlarini kiriting (masalan: +998... @username):', keyboard);
+        await ctx.answerCbQuery();
+    } else if (data === 'back_to_admin') {
+        ctx.session.state = undefined;
+        await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'add_category') {
         ctx.session = ctx.session || {};
