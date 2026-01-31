@@ -14,11 +14,14 @@ export class CartService {
         this.carts.set(userId, cart);
     }
 
-    updateItemQuantity(userId: number, productId: string, quantity: number): void {
+    updateItemQuantity(userId: number, productId: string, delta: number): void {
         const cart = this.carts.get(userId) || [];
         const item = cart.find(i => i.productId === productId);
         if (item) {
-            item.quantity = quantity;
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                this.removeItem(userId, productId);
+            }
         }
     }
 

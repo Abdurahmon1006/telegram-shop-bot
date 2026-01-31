@@ -23,14 +23,23 @@ export const userCommands = {
             await ctx.reply('🧺 Savatchangiz bo\'sh!');
             return;
         }
-        let cartList = '🧺 Savatchangiz:\n\n';
-        cartItems.forEach(item => {
-            cartList += `${item.productName || item.productId}: ${item.quantity} dona\n`;
-        });
-        const total = cartService.calculateTotal(userId);
-        cartList += `\nUmumiy summa: ${total} so'm`;
         
-        await ctx.reply(cartList, Markup.inlineKeyboard([
+        await ctx.reply('🧺 Savatchangiz:');
+        
+        for (const item of cartItems) {
+            const keyboard = Markup.inlineKeyboard([
+                [
+                    Markup.button.callback('➖', `cart_dec_${item.productId}`),
+                    Markup.button.callback(item.quantity.toString(), 'ignore'),
+                    Markup.button.callback('➕', `cart_inc_${item.productId}`),
+                ],
+                [Markup.button.callback('❌ O\'chirish', `cart_del_${item.productId}`)]
+            ]);
+            await ctx.reply(`${item.productName}: ${item.price} x ${item.quantity} = ${item.price * item.quantity} so'm`, keyboard);
+        }
+        
+        const total = cartService.calculateTotal(userId);
+        await ctx.reply(`💰 Jami: ${total} so'm`, Markup.inlineKeyboard([
             [Markup.button.callback('✅ Buyurtma berish', 'checkout')],
             [Markup.button.callback('🗑 Savatni tozalash', 'clear_cart')]
         ]));
