@@ -181,7 +181,7 @@ bot.on('message', async (ctx, next) => {
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
     const data = (ctx.callbackQuery as any).data;
-    } else if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
+    if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
         const parts = data.split('_');
         let qty = parseInt(parts[1]);
         if (isNaN(qty)) qty = 1;
