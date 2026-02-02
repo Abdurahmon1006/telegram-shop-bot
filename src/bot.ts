@@ -78,6 +78,23 @@ bot.on('message', async (ctx, next) => {
             return ctx.reply('❌ Iltimos, narxni raqamda kiriting:');
         }
         ctx.session.newProduct!.price = price;
+        ctx.session.state = 'admin_awaiting_product_description';
+        return ctx.reply('📄 Tovar tavsifini kiriting:');
+    }
+
+    if (ctx.session.state === 'admin_awaiting_product_description' && 'text' in ctx.message) {
+        ctx.session.newProduct = ctx.session.newProduct || {};
+        (ctx.session.newProduct as any).description = ctx.message.text;
+        ctx.session.state = 'admin_awaiting_product_stock';
+        return ctx.reply('📦 Ombor dagi sonini kiriting:');
+    }
+
+    if (ctx.session.state === 'admin_awaiting_product_stock' && 'text' in ctx.message) {
+        const stock = parseInt(ctx.message.text);
+        if (isNaN(stock)) {
+            return ctx.reply('❌ Iltimos, sonini raqamda kiriting:');
+        }
+        (ctx.session.newProduct as any).stock = stock;
         const categories = await productService.getAllCategories();
         const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_set_cat_${cat.id}`)]);
         ctx.session.state = 'admin_awaiting_product_category';
@@ -164,9 +181,10 @@ bot.on('message', async (ctx, next) => {
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
     const data = (ctx.callbackQuery as any).data;
-    if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
+    } else if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
         const parts = data.split('_');
-        const qty = parseInt(parts[1]);
+        let qty = parseInt(parts[1]);
+        if (isNaN(qty)) qty = 1;
         const productId = parts[2];
         const product = await productService.getProductById(productId);
         if (product) {
@@ -227,9 +245,6 @@ bot.on('callback_query', async (ctx) => {
         const productData = {
             ...ctx.session.newProduct,
             categoryId: catId,
-            description: 'Yangi mahsulot',
-            unit: 'dona',
-            stock: 100
         };
         await adminCommands.addProduct(ctx, productData);
         ctx.session.state = undefined;
