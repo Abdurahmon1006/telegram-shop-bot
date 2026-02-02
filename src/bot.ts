@@ -53,8 +53,17 @@ bot.on('message', async (ctx, next) => {
         return ctx.reply('📞 Telefon raqamingizni kiriting (namuna: +998901234567):');
     }
     if (ctx.session.state === 'awaiting_phone' && 'text' in ctx.message) {
+        const userId = ctx.from!.id;
+        const cartService = new (require('./services/cartService').CartService)();
+        const cartItems = cartService.getCartItems(userId);
+        
+        for (const item of cartItems) {
+            await productService.updateStock(item.productId, -item.quantity);
+        }
+        
+        cartService.clearCart(userId);
         ctx.session.state = undefined;
-        return ctx.reply('✅ Rahmat! Buyurtmangiz qabul qilindi.\nTez orada xodimlarimiz siz bilan bog\'lanadi.', mainKeyboard);
+        return ctx.reply('✅ Rahmat! Buyurtmangiz qabul qilindi.\nZaxiradan mahsulotlar ayrildi.\nTez orada xodimlarimiz siz bilan bog\'lanadi.', mainKeyboard);
     }
 
     // Admin Add Product Flow
@@ -203,8 +212,13 @@ bot.on('callback_query', async (ctx) => {
             await ctx.reply('Ushbu turkumda mahsulotlar yo\'q.');
         } else {
             for (const product of products) {
-                const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}`;
-                await ctx.reply(caption, productKeyboard(product.id));
+                const stockStatus = product.stock > 0 ? `✅ Ombor: ${product.stock} ${product.unit}` : '❌ Sotuvda yo\'q';
+                const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}\n${stockStatus}`;
+                if (product.stock > 0) {
+                    await ctx.reply(caption, productKeyboard(product.id));
+                } else {
+                    await ctx.reply(caption);
+                }
             }
         }
         await ctx.answerCbQuery();

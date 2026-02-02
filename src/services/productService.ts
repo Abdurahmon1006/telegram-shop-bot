@@ -88,8 +88,8 @@ export class ProductService {
     async updateStock(productId: string, quantity: number): Promise<{ message: string }> {
         const product = await this.getProductById(productId);
         if (product) {
-            product.stock = quantity;
-            return { message: `Ombor yangilandi: ${product.name} - ${quantity} ${product.unit}` };
+            product.stock += quantity;
+            return { message: `Ombor yangilandi: ${product.name} - ${product.stock} ${product.unit}` };
         }
         return { message: 'Tovar topilmadi!' };
     }
