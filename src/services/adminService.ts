@@ -1,7 +1,19 @@
 import { Admin } from '../models/admin';
 
 export class AdminService {
+    private static contactInfo = {
+        phone: '+998901234567',
+        address: '📍 Toshkent sh., Chilonzor tumani'
+    };
     private admins: Admin[] = [];
+
+    getContactInfo() {
+        return AdminService.contactInfo;
+    }
+
+    updateContactInfo(data: Partial<{ phone: string; address: string }>) {
+        AdminService.contactInfo = { ...AdminService.contactInfo, ...data };
+    }
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {
         const newAdmin: Admin = {

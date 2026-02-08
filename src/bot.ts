@@ -2,10 +2,12 @@ import { Context, Markup, Telegraf, session } from 'telegraf';
 import { userCommands } from './commands/userCommands';
 import { adminCommands } from './commands/adminCommands';
 import { ProductService } from './services/productService';
+import { AdminService } from './services/adminService';
 import { productKeyboard } from './keyboards/productKeyboard';
 import config from './config';
 
 const productService = new ProductService();
+const adminService = new AdminService();
 
 interface MySession {
     state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name';
@@ -152,13 +154,13 @@ bot.on('message', async (ctx, next) => {
     }
 
     if (ctx.session.state === 'admin_awaiting_address' && 'text' in ctx.message) {
-        // Mock save address
+        adminService.updateContactInfo({ address: ctx.message.text });
         ctx.session.state = undefined;
         return ctx.reply('✅ Manzil yangilandi!', adminCommands.showAdminPanel as any);
     }
 
     if (ctx.session.state === 'admin_awaiting_contact' && 'text' in ctx.message) {
-        // Mock save contact
+        adminService.updateContactInfo({ phone: ctx.message.text });
         ctx.session.state = undefined;
         return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', adminCommands.showAdminPanel as any);
     }
