@@ -182,6 +182,7 @@ bot.on('message', async (ctx, next) => {
 
 // Handle callback queries
 bot.on('callback_query', async (ctx) => {
+    if (!ctx.session) ctx.session = {};
     const data = (ctx.callbackQuery as any).data;
     if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
         const parts = data.split('_');
@@ -385,6 +386,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('Manzil va aloqa ma\'lumotlari:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = 'admin_awaiting_address';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
@@ -392,6 +394,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('📍 Yangi manzilni kiriting:', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'edit_contact_info') {
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = 'admin_awaiting_contact';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
@@ -399,6 +402,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('📞 Yangi aloqa ma\'lumotlarini kiriting (masalan: +998... @username):', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'back_to_admin') {
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = undefined;
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
