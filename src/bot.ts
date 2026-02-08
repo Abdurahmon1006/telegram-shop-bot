@@ -253,7 +253,7 @@ bot.on('callback_query', async (ctx) => {
         ctx.session.newProduct = undefined;
         await ctx.answerCbQuery();
     } else if (data === 'add_product') {
-        ctx.session = ctx.session || {};
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = 'admin_awaiting_product_name';
         await ctx.answerCbQuery();
         await ctx.reply('📝 Tovar nomini kiriting:');
@@ -344,6 +344,7 @@ bot.on('callback_query', async (ctx) => {
         await adminCommands.viewStatistics(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'manage_categories') {
+        if (!ctx.session) ctx.session = {};
         const buttons = [
             [Markup.button.callback('➕ Yangi turkum', 'add_category')],
             [Markup.button.callback('✏️ Tahrirlash', 'edit_category')],
@@ -375,6 +376,7 @@ bot.on('callback_query', async (ctx) => {
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'admin_contacts') {
+        if (!ctx.session) ctx.session = {};
         const buttons = [
             [Markup.button.callback('📍 Manzilni tahrirlash', 'edit_address')],
             [Markup.button.callback('📞 Aloqani tahrirlash', 'edit_contact_info')],
@@ -401,12 +403,12 @@ bot.on('callback_query', async (ctx) => {
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'add_category') {
-        ctx.session = ctx.session || {};
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = 'admin_awaiting_category_name';
         await ctx.reply('📝 Yangi turkum nomini kiriting:');
         await ctx.answerCbQuery();
     } else if (data === 'checkout') {
-        ctx.session = ctx.session || {};
+        if (!ctx.session) ctx.session = {};
         ctx.session.state = 'awaiting_name';
         await ctx.answerCbQuery();
         await ctx.reply('📦 Buyurtma berish uchun ismingizni kiriting:');
