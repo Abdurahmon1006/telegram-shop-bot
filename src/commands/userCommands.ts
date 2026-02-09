@@ -62,6 +62,6 @@ export const userCommands = {
 
     contact: async (ctx: Context) => {
         const contactInfo = new (require('../services/adminService').AdminService)().getContactInfo();
-        await ctx.reply(`📞 Telefon: ${contactInfo.phone}\n📍 Manzil: ${contactInfo.address}`);
+        await ctx.reply(`📞 Telefon: ${contactInfo.phone}\n👤 Telegram: ${contactInfo.username}`);
     },
 };

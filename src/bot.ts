@@ -155,14 +155,14 @@ bot.on('message', async (ctx, next) => {
 
     if (ctx.session.state === 'admin_awaiting_address' && 'text' in ctx.message) {
         const contactInfo = adminService.getContactInfo();
-        adminService.updateContactInfo({ phone: contactInfo.phone, address: ctx.message.text });
+        adminService.updateContactInfo({ phone: (contactInfo as any).phone, username: ctx.message.text } as any);
         ctx.session.state = undefined;
-        return ctx.reply('✅ Manzil yangilandi!', adminCommands.showAdminPanel as any);
+        return ctx.reply('✅ Username yangilandi!', adminCommands.showAdminPanel as any);
     }
 
     if (ctx.session.state === 'admin_awaiting_contact' && 'text' in ctx.message) {
-        const contactInfo = adminService.getContactInfo();
-        adminService.updateContactInfo({ phone: ctx.message.text, address: contactInfo.address });
+        const contactInfo = adminService.getContactInfo() as any;
+        adminService.updateContactInfo({ phone: ctx.message.text, username: contactInfo.username } as any);
         ctx.session.state = undefined;
         return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', adminCommands.showAdminPanel as any);
     }
@@ -393,7 +393,7 @@ bot.on('callback_query', async (ctx) => {
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
         ]);
-        await ctx.reply('📍 Yangi manzilni kiriting:', keyboard);
+        await ctx.reply('👤 Yangi Telegram username kiriting (masalan: @username):', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'edit_contact_info') {
         if (!ctx.session) ctx.session = {};

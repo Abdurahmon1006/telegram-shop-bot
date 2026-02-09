@@ -3,7 +3,7 @@ import { Admin } from '../models/admin';
 export class AdminService {
     private static contactInfo = {
         phone: '+998901234567',
-        address: '📍 Toshkent sh., Chilonzor tumani'
+        username: '@shop_admin'
     };
     private admins: Admin[] = [];
 
@@ -11,7 +11,7 @@ export class AdminService {
         return AdminService.contactInfo;
     }
 
-    updateContactInfo(data: { phone: string; address: string }) {
+    updateContactInfo(data: { phone: string; username: string }) {
         AdminService.contactInfo = data;
     }
 
