@@ -154,13 +154,15 @@ bot.on('message', async (ctx, next) => {
     }
 
     if (ctx.session.state === 'admin_awaiting_address' && 'text' in ctx.message) {
-        adminService.updateContactInfo({ address: ctx.message.text });
+        const contactInfo = adminService.getContactInfo();
+        adminService.updateContactInfo({ phone: contactInfo.phone, address: ctx.message.text });
         ctx.session.state = undefined;
         return ctx.reply('✅ Manzil yangilandi!', adminCommands.showAdminPanel as any);
     }
 
     if (ctx.session.state === 'admin_awaiting_contact' && 'text' in ctx.message) {
-        adminService.updateContactInfo({ phone: ctx.message.text });
+        const contactInfo = adminService.getContactInfo();
+        adminService.updateContactInfo({ phone: ctx.message.text, address: contactInfo.address });
         ctx.session.state = undefined;
         return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', adminCommands.showAdminPanel as any);
     }

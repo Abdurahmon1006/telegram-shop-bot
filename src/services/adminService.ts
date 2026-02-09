@@ -11,8 +11,8 @@ export class AdminService {
         return AdminService.contactInfo;
     }
 
-    updateContactInfo(data: Partial<{ phone: string; address: string }>) {
-        AdminService.contactInfo = { ...AdminService.contactInfo, ...data };
+    updateContactInfo(data: { phone: string; address: string }) {
+        AdminService.contactInfo = data;
     }
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {
