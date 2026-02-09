@@ -381,11 +381,11 @@ bot.on('callback_query', async (ctx) => {
     } else if (data === 'admin_contacts') {
         if (!ctx.session) ctx.session = {};
         const buttons = [
-            [Markup.button.callback('📍 Manzilni tahrirlash', 'edit_address')],
-            [Markup.button.callback('📞 Aloqani tahrirlash', 'edit_contact_info')],
+            [Markup.button.callback('👤 Username\'ni tahrirlash', 'edit_address')],
+            [Markup.button.callback('📞 Telefonni tahrirlash', 'edit_contact_info')],
             [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
         ];
-        await ctx.reply('Manzil va aloqa ma\'lumotlari:', Markup.inlineKeyboard(buttons));
+        await ctx.reply('Username va telefon ma\'lumotlari:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
         if (!ctx.session) ctx.session = {};
@@ -401,7 +401,7 @@ bot.on('callback_query', async (ctx) => {
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
         ]);
-        await ctx.reply('📞 Yangi aloqa ma\'lumotlarini kiriting (masalan: +998... @username):', keyboard);
+        await ctx.reply('📞 Yangi telefon raqamini kiriting (masalan: +998...):', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'back_to_admin') {
         if (!ctx.session) ctx.session = {};
