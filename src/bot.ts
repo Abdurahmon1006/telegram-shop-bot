@@ -27,13 +27,14 @@ const bot = new Telegraf<MyContext>(config.BOT_TOKEN);
 bot.use(session());
 
 const mainKeyboard = Markup.keyboard([
-    ['🛒 Tovarlar', '🧺 Savatcha'],
+    ['🛒 Mahsulotlar', '🧺 Savatcha'],
     ['📍 Bizning manzil', '📞 Aloqa'],
     ['📦 Buyurtmalar tarixi']
 ]).resize();
 
 bot.start((ctx) => ctx.reply('Do\'konimizga xush kelibsiz! 🛍️', mainKeyboard));
 
+bot.hears('🛒 Mahsulotlar', userCommands.viewProducts);
 bot.hears('🛒 Tovarlar', userCommands.viewProducts);
 bot.hears('🧺 Savatcha', userCommands.viewCart);
 bot.hears('📦 Buyurtmalar tarixi', userCommands.viewOrderHistory);
@@ -190,6 +191,15 @@ bot.on('message', async (ctx, next) => {
             ctx.session.state = undefined;
             ctx.session.editingCategoryId = undefined;
             return ctx.reply('✅ Turkum nomi yangilandi!', adminCommands.showAdminPanel as any);
+        }
+    }
+
+    // Default: show main keyboard if not in any state and message is not a command
+    if ('text' in ctx.message && !ctx.session.state && !ctx.message.text.startsWith('/')) {
+        const text = ctx.message.text;
+        const mainButtons = ['🛒 Mahsulotlar', '🧺 Savatcha', '📍 Bizning manzil', '📞 Aloqa', '📦 Buyurtmalar tarixi'];
+        if (!mainButtons.includes(text)) {
+            return ctx.reply('Asosiy menyu:', mainKeyboard);
         }
     }
 
