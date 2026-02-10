@@ -10,10 +10,10 @@ const productService = new ProductService();
 const adminService = new AdminService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image';
     name?: string;
     phone?: string;
-    newProduct?: Partial<{ name: string; price: number; categoryId: string }>;
+    newProduct?: Partial<{ name: string; price: number; categoryId: string; description: string; stock: number; imageUrl?: string }>;
     editingProductId?: string;
     editingCategoryId?: string;
 }
@@ -97,6 +97,20 @@ bot.on('message', async (ctx, next) => {
             return ctx.reply('❌ Iltimos, sonini raqamda kiriting:');
         }
         (ctx.session.newProduct as any).stock = stock;
+        ctx.session.state = 'admin_awaiting_product_image';
+        return ctx.reply('🖼 Tovar rasmini yuboring (yoki /skip buyrug\'ini yuboring):');
+    }
+
+    if (ctx.session.state === 'admin_awaiting_product_image') {
+        if ('photo' in ctx.message) {
+            const photo = ctx.message.photo[ctx.message.photo.length - 1];
+            (ctx.session.newProduct as any).imageUrl = photo.file_id;
+        } else if ('text' in ctx.message && ctx.message.text === '/skip') {
+            // Skip image
+        } else {
+            return ctx.reply('❌ Iltimos, rasm yuboring yoki /skip buyrug\'ini ishlating:');
+        }
+        
         const categories = await productService.getAllCategories();
         const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_set_cat_${cat.id}`)]);
         ctx.session.state = 'admin_awaiting_product_category';
@@ -237,10 +251,18 @@ bot.on('callback_query', async (ctx) => {
             for (const product of products) {
                 const stockStatus = product.stock > 0 ? `✅ Ombor: ${product.stock} ${product.unit}` : '❌ Sotuvda yo\'q';
                 const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}\n${stockStatus}`;
-                if (product.stock > 0) {
-                    await ctx.reply(caption, productKeyboard(product.id));
+                
+                if (product.imageUrl) {
+                    await ctx.replyWithPhoto(product.imageUrl, {
+                        caption,
+                        ...productKeyboard(product.id)
+                    });
                 } else {
-                    await ctx.reply(caption);
+                    if (product.stock > 0) {
+                        await ctx.reply(caption, productKeyboard(product.id));
+                    } else {
+                        await ctx.reply(caption);
+                    }
                 }
             }
         }
