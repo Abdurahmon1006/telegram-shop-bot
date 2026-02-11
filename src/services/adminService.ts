@@ -1,10 +1,23 @@
 import { Admin } from '../models/admin';
 
 export class AdminService {
+    private static workDays = [1, 2, 3, 4, 5, 6]; // 1-6 (Du-Shanba), 0 - Yakshanba
     private static contactInfo = {
         phone: '+998901234567',
         username: '@shop_admin'
     };
+
+    getWorkDays() {
+        return AdminService.workDays;
+    }
+
+    setWorkDays(days: number[]) {
+        AdminService.workDays = days;
+    }
+
+    isWorkDay(date: Date = new Date()) {
+        return AdminService.workDays.includes(date.getDay());
+    }
     private admins: Admin[] = [];
 
     getContactInfo() {

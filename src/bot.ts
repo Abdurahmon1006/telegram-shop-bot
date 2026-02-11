@@ -51,6 +51,9 @@ bot.on('message', async (ctx, next) => {
     if (!ctx.session) ctx.session = {};
 
     if (ctx.session.state === 'awaiting_name' && 'text' in ctx.message) {
+        if (!adminService.isWorkDay()) {
+            return ctx.reply('❌ Kechirasiz, bugun bizda dam olish kuni. Buyurtmalarni ish kunlari qabul qilamiz.', mainKeyboard);
+        }
         ctx.session.name = ctx.message.text;
         ctx.session.state = 'awaiting_phone';
         return ctx.reply('📞 Telefon raqamingizni kiriting (namuna: +998901234567):');
@@ -417,9 +420,38 @@ bot.on('callback_query', async (ctx) => {
         const buttons = [
             [Markup.button.callback('👤 Username\'ni tahrirlash', 'edit_address')],
             [Markup.button.callback('📞 Telefonni tahrirlash', 'edit_contact_info')],
+            [Markup.button.callback('📅 Ish kunlarini sozlash', 'manage_work_days')],
             [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
         ];
-        await ctx.reply('Username va telefon ma\'lumotlari:', Markup.inlineKeyboard(buttons));
+        await ctx.reply('Sozlamalar:', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data === 'manage_work_days') {
+        const days = adminService.getWorkDays();
+        const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+        const buttons = weekDays.map((name, index) => {
+            const isActive = days.includes(index);
+            return [Markup.button.callback(`${isActive ? '✅' : '❌'} ${name}`, `toggle_day_${index}`)];
+        });
+        buttons.push([Markup.button.callback('🔙 Orqaga', 'admin_contacts')]);
+        await ctx.reply('Ish kunlarini belgilang:', Markup.inlineKeyboard(buttons));
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('toggle_day_')) {
+        const day = parseInt(data.split('_')[2]);
+        let days = adminService.getWorkDays();
+        if (days.includes(day)) {
+            days = days.filter(d => d !== day);
+        } else {
+            days.push(day);
+        }
+        adminService.setWorkDays(days);
+        // Refresh view
+        const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+        const buttons = weekDays.map((name, index) => {
+            const isActive = days.includes(index);
+            return [Markup.button.callback(`${isActive ? '✅' : '❌'} ${name}`, `toggle_day_${index}`)];
+        });
+        buttons.push([Markup.button.callback('🔙 Orqaga', 'admin_contacts')]);
+        await ctx.editMessageText('Ish kunlarini belgilang:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
         if (!ctx.session) ctx.session = {};
