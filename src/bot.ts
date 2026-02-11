@@ -105,7 +105,9 @@ bot.on('message', async (ctx, next) => {
     if (ctx.session.state === 'admin_awaiting_product_image') {
         if ('photo' in ctx.message) {
             const photo = ctx.message.photo[ctx.message.photo.length - 1];
-            (ctx.session.newProduct as any).imageUrl = photo.file_id;
+            if (ctx.session.newProduct) {
+                ctx.session.newProduct.imageUrl = photo.file_id;
+            }
         } else if ('text' in ctx.message && ctx.message.text === '/skip') {
             // Skip image
         } else {
