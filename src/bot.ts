@@ -2,6 +2,8 @@ import { Context, Markup, Telegraf, session } from 'telegraf';
 import { userCommands } from './commands/userCommands';
 import { adminCommands } from './commands/adminCommands';
 import { ProductService } from './services/productService';
+import { CartService } from './services/cartService';
+import { OrderService } from './services/orderService';
 import { AdminService } from './services/adminService';
 import { productKeyboard } from './keyboards/productKeyboard';
 import config from './config';
@@ -59,15 +61,25 @@ bot.on('message', async (ctx, next) => {
         return ctx.reply('📞 Telefon raqamingizni kiriting (namuna: +998901234567):');
     }
     if (ctx.session.state === 'awaiting_phone' && 'text' in ctx.message) {
-        const userId = ctx.from!.id;
+        const userId = ctx.from!.id.toString();
+        const phoneNumber = ctx.message.text;
+        const customerName = ctx.session.name;
         const cartService = new (require('./services/cartService').CartService)();
-        const cartItems = cartService.getCartItems(userId);
+        const orderService = new (require('./services/orderService').OrderService)();
+        const cartItems = cartService.getCartItems(Number(userId));
         
+        // Calculate total price
+        const totalPrice = cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
+        
+        // Save the order
+        orderService.placeOrder(userId, cartItems, totalPrice, customerName, phoneNumber);
+        
+        // Update stock
         for (const item of cartItems) {
             await productService.updateStock(item.productId, -item.quantity);
         }
         
-        cartService.clearCart(userId);
+        cartService.clearCart(Number(userId));
         ctx.session.state = undefined;
         return ctx.reply('✅ Rahmat! Buyurtmangiz qabul qilindi.\nZaxiradan mahsulotlar ayrildi.\nTez orada xodimlarimiz siz bilan bog\'lanadi.', mainKeyboard);
     }

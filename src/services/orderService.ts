@@ -1,12 +1,12 @@
-import { Order } from '../models/order';
+ import { Order } from '../models/order';
 import { CartItem } from '../models/cartItem';
 
 export class OrderService {
-    private orders: Order[] = [];
+    private static orders: Order[] = [];
 
     placeOrder(userId: string, cartItems: CartItem[], totalPrice: number, customerName?: string, customerPhone?: string): Order {
         const newOrder: Order = {
-            id: (this.orders.length + 1).toString(),
+            id: (OrderService.orders.length + 1).toString(),
             userId,
             items: cartItems,
             totalPrice,
@@ -15,21 +15,29 @@ export class OrderService {
             customerName,
             customerPhone,
         };
-        this.orders.push(newOrder);
+        OrderService.orders.push(newOrder);
         return newOrder;
     }
 
     getOrderHistory(userId: string): Order[] {
-        return this.orders.filter(order => order.userId === userId);
+        return OrderService.orders.filter(order => order.userId === userId);
     }
 
     getAllOrders(): Order[] {
-        return this.orders;
+        return OrderService.orders;
+    }
+
+    static getOrders(): Order[] {
+        return OrderService.orders;
+    }
+
+    static getTotalRevenue(): number {
+        return OrderService.orders.reduce((total, order) => total + order.totalPrice, 0);
     }
 
     async createOrder(userId: string, orderDetails: Partial<Order>): Promise<Order> {
         const newOrder: Order = {
-            id: (this.orders.length + 1).toString(),
+            id: (OrderService.orders.length + 1).toString(),
             userId,
             items: orderDetails.items || [],
             totalPrice: orderDetails.totalPrice || 0,
@@ -38,7 +46,7 @@ export class OrderService {
             customerName: orderDetails.customerName,
             customerPhone: orderDetails.customerPhone,
         };
-        this.orders.push(newOrder);
+        OrderService.orders.push(newOrder);
         return newOrder;
     }
 }

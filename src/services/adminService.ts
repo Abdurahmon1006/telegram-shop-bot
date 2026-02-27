@@ -54,10 +54,12 @@ export class AdminService {
     async getStatistics(): Promise<string> {
         const productService = new (require('./productService').ProductService)();
         const products = await productService.getAllProducts();
+        const orders = require('./orderService').OrderService.getOrders();
+        const totalRevenue = require('./orderService').OrderService.getTotalRevenue();
         return `📊 Statistika:
 - Jami mahsulotlar: ${products.length} ta
-- Jami buyurtmalar: 0 ta
-- Jami daromad: 0 so'm`;
+- Jami buyurtmalar: ${orders.length} ta
+- Jami daromad: ${totalRevenue} so'm`;
     }
 
     async getUsers(): Promise<string> {
