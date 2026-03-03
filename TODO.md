@@ -1,22 +1,19 @@
-# TODO List - Telegram Shop Bot Fixes
+# TODO List - Telegram Shop Bot Features
 
-## Task: Fix Critical Bug - Orders Not Being Saved
+## Task: Implement all required features
 
-### Step 1: Fix bot.ts - Save orders during checkout
-- [ ] Import OrderService
-- [ ] Add order creation logic after collecting name and phone
-- [ ] Pass customer name and phone to the order
+### 1. PostgreSQL/Supabase Setup
+- [ ] Update config/index.ts with Supabase DATABASE_URL
+- [ ] Install pg and sequelize dependencies
+- [ ] Create db/index.ts for database connection
+- [ ] Create database models
 
-### Step 2: Fix orderService.ts - Expose order data for statistics
-- [ ] Make orders array accessible (static or add getter method)
-- [ ] Add method to get order statistics (total orders, revenue)
+### 2. Address Editing
+- [ ] Add address field to adminService contactInfo
+- [ ] Add edit_address callback handler in bot.ts
+- [ ] Update user contact command to show address
 
-### Step 3: Fix adminService.ts - Update statistics to show real data
-- [ ] Import OrderService
-- [ ] Get actual order count and revenue from orderService
-- [ ] Update getStatistics() method
-
-### Step 4: Verify the fixes work
-- [ ] Test checkout flow
-- [ ] Verify order history
-- [ ] Verify admin statistics
+### 3. Image Display Fix
+- [ ] Download images from Telegram and store locally
+- [ ] Update product model to store local image path
+- [ ] Fix image display logic

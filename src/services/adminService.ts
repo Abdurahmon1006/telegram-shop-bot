@@ -1,10 +1,11 @@
 import { Admin } from '../models/admin';
 
 export class AdminService {
-    private static workDays = [1, 2, 3, 4, 5, 6]; // 1-6 (Du-Shanba), 0 - Yakshanba
+    private static workDays = [1, 2, 3, 4, 5, 6];
     private static contactInfo = {
         phone: '+998901234567',
-        username: '@shop_admin'
+        username: '@shop_admin',
+        address: 'Manzil kiritilmagan'
     };
 
     getWorkDays() {
@@ -24,8 +25,8 @@ export class AdminService {
         return AdminService.contactInfo;
     }
 
-    updateContactInfo(data: { phone: string; username: string }) {
-        AdminService.contactInfo = data;
+    updateContactInfo(data: { phone?: string; username?: string; address?: string }) {
+        AdminService.contactInfo = { ...AdminService.contactInfo, ...data };
     }
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {

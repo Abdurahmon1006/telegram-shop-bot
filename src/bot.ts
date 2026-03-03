@@ -12,7 +12,7 @@ const productService = new ProductService();
 const adminService = new AdminService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image' | 'admin_awaiting_shop_address';
     name?: string;
     phone?: string;
     newProduct?: Partial<{ name: string; price: number; categoryId: string; description: string; stock: number; imageUrl?: string }>;
@@ -42,7 +42,8 @@ bot.hears('🧺 Savatcha', userCommands.viewCart);
 bot.hears('📦 Buyurtmalar tarixi', userCommands.viewOrderHistory);
 bot.hears('📞 Aloqa', userCommands.contact);
 bot.hears('📍 Bizning manzil', async (ctx) => {
-    await ctx.reply('📍 Bizning manzil:\nhttps://maps.app.goo.gl/e8YrtQDoaKWuLq6o7');
+    const contactInfo = adminService.getContactInfo() as any;
+    await ctx.reply(`📍 Bizning manzil:\n${contactInfo.address || 'Manzil kiritilmagan'}`);
 });
 
 bot.command('admin', adminCommands.showAdminPanel);
@@ -68,13 +69,10 @@ bot.on('message', async (ctx, next) => {
         const orderService = new (require('./services/orderService').OrderService)();
         const cartItems = cartService.getCartItems(Number(userId));
         
-        // Calculate total price
-        const totalPrice = cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
+        const totalPrice = cartItems.reduce((total: number, item: any) => total + (item.price || 0) * item.quantity, 0);
         
-        // Save the order
         orderService.placeOrder(userId, cartItems, totalPrice, customerName, phoneNumber);
         
-        // Update stock
         for (const item of cartItems) {
             await productService.updateStock(item.productId, -item.quantity);
         }
@@ -194,9 +192,16 @@ bot.on('message', async (ctx, next) => {
 
     if (ctx.session.state === 'admin_awaiting_contact' && 'text' in ctx.message) {
         const contactInfo = adminService.getContactInfo() as any;
-        adminService.updateContactInfo({ phone: ctx.message.text, username: contactInfo.username } as any);
+        adminService.updateContactInfo({ phone: ctx.message.text, username: contactInfo.username });
         ctx.session.state = undefined;
         return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', adminCommands.showAdminPanel as any);
+    }
+
+    if (ctx.session.state === 'admin_awaiting_shop_address' && 'text' in ctx.message) {
+        const contactInfo = adminService.getContactInfo() as any;
+        adminService.updateContactInfo({ address: ctx.message.text });
+        ctx.session.state = undefined;
+        return ctx.reply('✅ Manzil yangilandi!', adminCommands.showAdminPanel as any);
     }
 
     if (ctx.session.state === 'admin_awaiting_edit_category_name' && 'text' in ctx.message) {
@@ -211,7 +216,6 @@ bot.on('message', async (ctx, next) => {
         }
     }
 
-    // Default: show main keyboard if not in any state and message is not a command
     if ('text' in ctx.message && !ctx.session.state && !ctx.message.text.startsWith('/')) {
         const text = ctx.message.text;
         const mainButtons = ['🛒 Mahsulotlar', '🧺 Savatcha', '📍 Bizning manzil', '📞 Aloqa', '📦 Buyurtmalar tarixi'];
@@ -223,7 +227,6 @@ bot.on('message', async (ctx, next) => {
     return next();
 });
 
-// Handle callback queries
 bot.on('callback_query', async (ctx) => {
     if (!ctx.session) ctx.session = {};
     const data = (ctx.callbackQuery as any).data;
@@ -429,13 +432,15 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data === 'admin_contacts') {
         if (!ctx.session) ctx.session = {};
+        const contactInfo = adminService.getContactInfo() as any;
         const buttons = [
+            [Markup.button.callback('📍 Manzilni tahrirlash', 'edit_shop_address')],
             [Markup.button.callback('👤 Username\'ni tahrirlash', 'edit_address')],
             [Markup.button.callback('📞 Telefonni tahrirlash', 'edit_contact_info')],
             [Markup.button.callback('📅 Ish kunlarini sozlash', 'manage_work_days')],
             [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
         ];
-        await ctx.reply('Sozlamalar:', Markup.inlineKeyboard(buttons));
+        await ctx.reply(`📞 Aloqa ma'lumotlari:\n📍 Manzil: ${contactInfo.address || 'Kiritilmagan'}\n👤 Telegram: ${contactInfo.username}\n📞 Telefon: ${contactInfo.phone}\n\nSozlamalar:`, Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'manage_work_days') {
         const days = adminService.getWorkDays();
@@ -456,7 +461,6 @@ bot.on('callback_query', async (ctx) => {
             days.push(day);
         }
         adminService.setWorkDays(days);
-        // Refresh view
         const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
         const buttons = weekDays.map((name, index) => {
             const isActive = days.includes(index);
@@ -480,6 +484,14 @@ bot.on('callback_query', async (ctx) => {
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
         ]);
         await ctx.reply('📞 Yangi telefon raqamini kiriting (masalan: +998...):', keyboard);
+        await ctx.answerCbQuery();
+    } else if (data === 'edit_shop_address') {
+        if (!ctx.session) ctx.session = {};
+        ctx.session.state = 'admin_awaiting_shop_address';
+        const keyboard = Markup.inlineKeyboard([
+            [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
+        ]);
+        await ctx.reply('📍 Yangi manzilni kiriting:', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'back_to_admin') {
         if (!ctx.session) ctx.session = {};
