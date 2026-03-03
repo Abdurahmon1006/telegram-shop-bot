@@ -12,12 +12,13 @@ const productService = new ProductService();
 const adminService = new AdminService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image' | 'admin_awaiting_shop_address';
+    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image' | 'admin_awaiting_shop_address' | 'admin_auth' | 'admin_awaiting_password';
     name?: string;
     phone?: string;
-    newProduct?: Partial<{ name: string; price: number; categoryId: string; description: string; stock: number; imageUrl?: string }>;
+    newProduct?: Partial<{ name: string; price: number; categoryId: string; description: string; stock: number; imageUrl?: string; unit?: string }>;
     editingProductId?: string;
     editingCategoryId?: string;
+    isAdminAuthenticated?: boolean;
 }
 
 interface MyContext extends Context {
@@ -46,12 +47,41 @@ bot.hears('📍 Bizning manzil', async (ctx) => {
     await ctx.reply(`📍 Bizning manzil:\n${contactInfo.address || 'Manzil kiritilmagan'}`);
 });
 
-bot.command('admin', adminCommands.showAdminPanel);
-bot.command('panel', adminCommands.showAdminPanel);
+bot.command('admin', async (ctx) => {
+    if (!ctx.session) ctx.session = {};
+    ctx.session.state = 'admin_awaiting_password';
+    await ctx.reply('🔐 Admin parolini kiriting:');
+});
+
+bot.command('panel', async (ctx) => {
+    if (!ctx.session) ctx.session = {};
+    ctx.session.state = 'admin_awaiting_password';
+    await ctx.reply('🔐 Admin parolini kiriting:');
+});
+
+bot.command('login', async (ctx) => {
+    if (!ctx.session) ctx.session = {};
+    ctx.session.state = 'admin_awaiting_password';
+    await ctx.reply('🔐 Admin parolini kiriting:');
+});
 
 // Handle text messages for order flow and admin product adding
 bot.on('message', async (ctx, next) => {
     if (!ctx.session) ctx.session = {};
+
+    // Admin password check
+    if (ctx.session.state === 'admin_awaiting_password' && 'text' in ctx.message) {
+        const password = ctx.message.text;
+        if (adminService.checkAdminPassword(password)) {
+            ctx.session.isAdminAuthenticated = true;
+            ctx.session.state = undefined;
+            await adminCommands.showAdminPanel(ctx);
+        } else {
+            ctx.session.state = undefined;
+            await ctx.reply('❌ Noto\'g\'ri parol!', mainKeyboard);
+        }
+        return;
+    }
 
     if (ctx.session.state === 'awaiting_name' && 'text' in ctx.message) {
         if (!adminService.isWorkDay()) {
@@ -69,7 +99,14 @@ bot.on('message', async (ctx, next) => {
         const orderService = new (require('./services/orderService').OrderService)();
         const cartItems = cartService.getCartItems(Number(userId));
         
-        const totalPrice = cartItems.reduce((total: number, item: any) => total + (item.price || 0) * item.quantity, 0);
+        // Get fresh prices from products and calculate total
+        let totalPrice = 0;
+        for (const item of cartItems) {
+            const product = await productService.getProductById(item.productId);
+            if (product) {
+                totalPrice += product.price * item.quantity;
+            }
+        }
         
         orderService.placeOrder(userId, cartItems, totalPrice, customerName, phoneNumber);
         
@@ -94,6 +131,13 @@ bot.on('message', async (ctx, next) => {
             return ctx.reply('❌ Iltimos, narxni raqamda kiriting:');
         }
         ctx.session.newProduct!.price = price;
+        ctx.session.state = 'admin_awaiting_product_unit';
+        return ctx.reply('📏 Tovar birligini kiriting (masalan: dona, kg, litr, qop):');
+    }
+
+    if (ctx.session.state === 'admin_awaiting_product_unit' && 'text' in ctx.message) {
+        ctx.session.newProduct = ctx.session.newProduct || {};
+        (ctx.session.newProduct as any).unit = ctx.message.text;
         ctx.session.state = 'admin_awaiting_product_description';
         return ctx.reply('📄 Tovar tavsifini kiriting:');
     }
@@ -183,6 +227,17 @@ bot.on('message', async (ctx, next) => {
         }
     }
 
+    if (ctx.session.state === 'admin_awaiting_edit_product_image' && 'photo' in ctx.message) {
+        const productId = ctx.session.editingProductId;
+        const photo = ctx.message.photo[ctx.message.photo.length - 1];
+        if (productId) {
+            await productService.updateProduct(productId, { imageUrl: photo.file_id });
+            ctx.session.state = undefined;
+            ctx.session.editingProductId = undefined;
+            return ctx.reply('✅ Mahsulot rasmi yangilandi!', adminCommands.showAdminPanel as any);
+        }
+    }
+
     if (ctx.session.state === 'admin_awaiting_address' && 'text' in ctx.message) {
         const contactInfo = adminService.getContactInfo();
         adminService.updateContactInfo({ phone: (contactInfo as any).phone, username: ctx.message.text } as any);
@@ -241,7 +296,8 @@ bot.on('callback_query', async (ctx) => {
                 productId: product.id,
                 productName: product.name,
                 price: product.price,
-                quantity: qty
+                quantity: qty,
+                unit: product.unit
             };
             const userId = ctx.from!.id;
             const cartService = new (require('./services/cartService').CartService)();
@@ -330,6 +386,7 @@ bot.on('callback_query', async (ctx) => {
             [Markup.button.callback('💰 Narxini tahrirlash', `edit_field_price_${productId}`)],
             [Markup.button.callback('📄 Tavsifini tahrirlash', `edit_field_desc_${productId}`)],
             [Markup.button.callback('📏 Birligini tahrirlash', `edit_field_unit_${productId}`)],
+            [Markup.button.callback('🖼 Rasmni tahrirlash', `edit_field_image_${productId}`)],
             [Markup.button.callback('📁 Turkumini tahrirlash', `edit_field_cat_${productId}`)],
             [Markup.button.callback('🔙 Bekor qilish', 'edit_product')]
         ];
@@ -352,7 +409,10 @@ bot.on('callback_query', async (ctx) => {
             await ctx.reply('📄 Yangi tavsifni kiriting:');
         } else if (field === 'unit') {
             ctx.session.state = 'admin_awaiting_edit_product_unit';
-            await ctx.reply('📏 Yangi o\'lchov birligini kiriting (masalan: kg, dona, litr):');
+            await ctx.reply('📏 Yangi o\'lchov birligini kiriting (masalan: kg, dona, litr, qop):');
+        } else if (field === 'image') {
+            ctx.session.state = 'admin_awaiting_edit_product_image';
+            await ctx.reply('🖼 Yangi rasmni yuboring:');
         } else if (field === 'cat') {
             const categories = await productService.getAllCategories();
             const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_edit_set_cat_${cat.id}`)]);

@@ -7,6 +7,7 @@ export class AdminService {
         username: '@shop_admin',
         address: 'Manzil kiritilmagan'
     };
+    private static adminPassword = 'admin123';
 
     getWorkDays() {
         return AdminService.workDays;
@@ -27,6 +28,14 @@ export class AdminService {
 
     updateContactInfo(data: { phone?: string; username?: string; address?: string }) {
         AdminService.contactInfo = { ...AdminService.contactInfo, ...data };
+    }
+
+    setAdminPassword(password: string) {
+        AdminService.adminPassword = password;
+    }
+
+    checkAdminPassword(password: string): boolean {
+        return password === AdminService.adminPassword;
     }
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {
