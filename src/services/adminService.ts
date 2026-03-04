@@ -113,12 +113,12 @@ export class AdminService {
     async getStatistics(): Promise<string> {
         const productService = new (require('./productService').ProductService)();
         const products = await productService.getAllProducts();
-        const orders = require('./orderService').OrderService.getOrders();
+        const orders: Array<{status: string}> = require('./orderService').OrderService.getOrders();
         const totalRevenue = require('./orderService').OrderService.getTotalRevenue();
         
-        const pendingOrders = orders.filter(o => o.status === 'pending').length;
-        const completedOrders = orders.filter(o => o.status === 'completed').length;
-        const canceledOrders = orders.filter(o => o.status === 'canceled').length;
+        const pendingOrders = orders.filter((o: {status: string}) => o.status === 'pending').length;
+        const completedOrders = orders.filter((o: {status: string}) => o.status === 'completed').length;
+        const canceledOrders = orders.filter((o: {status: string}) => o.status === 'canceled').length;
         
         return `📊 Statistika:
 - Jami mahsulotlar: ${products.length} ta

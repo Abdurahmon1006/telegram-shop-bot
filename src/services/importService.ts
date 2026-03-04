@@ -39,19 +39,30 @@ export class ImportService {
             const existingProducts = await this.productService.getAllProducts();
             const productMap = new Map(existingProducts.map(p => [p.name.toLowerCase(), p]));
 
+            // First pass: create all categories that don't exist
             for (const row of data) {
                 if (!row.name || !row.price) {
-                    continue; // Skip rows without name or price
+                    continue;
+                }
+                
+                const categoryName = (row.category || 'Boshqa').trim();
+                if (!categoryMap.has(categoryName.toLowerCase())) {
+                    const newCategory = await this.productService.addCategory(categoryName);
+                    categoryMap.set(categoryName.toLowerCase(), newCategory);
+                }
+            }
+
+            // Second pass: add/update products
+            for (const row of data) {
+                if (!row.name || !row.price) {
+                    continue;
                 }
 
                 const categoryName = (row.category || 'Boshqa').trim();
-                let categoryId = categoryMap.get(categoryName.toLowerCase())?.id;
-
-                // Create category if it doesn't exist
-                if (!categoryId) {
-                    const newCategory = await this.productService.addCategory(categoryName);
-                    categoryId = newCategory.id;
-                    categoryMap.set(categoryName.toLowerCase(), newCategory);
+                const category = categoryMap.get(categoryName.toLowerCase());
+                
+                if (!category) {
+                    continue; // Skip if category not found
                 }
 
                 const productData: Partial<Product> = {
@@ -60,7 +71,7 @@ export class ImportService {
                     price: Number(row.price) || 0,
                     unit: (row.unit || 'dona').trim(),
                     stock: Number(row.stock) || 0,
-                    categoryId: categoryId,
+                    categoryId: category.id,
                 };
 
                 // Check if product exists (update) or new (create)
