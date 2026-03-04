@@ -1,0 +1,12 @@
+[
+  {
+    "id": "1",
+    "name": "non",
+    "description": "oddi non",
+    "price": 3000,
+    "unit": "dona",
+    "stock": 50,
+    "categoryId": "1",
+    "imageUrl": "AgACAgIAAxkBAAIGgWmn6AxfWiYbmvpRUgPKwSTublXwAAJWE2sbBWlASZV_ovtMUJJiAQADAgADeAADOgQ"
+  }
+]
