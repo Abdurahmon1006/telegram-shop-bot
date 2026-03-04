@@ -271,9 +271,7 @@ bot.on('message', async (ctx, next) => {
     if (ctx.session.state === 'admin_awaiting_edit_category_name' && 'text' in ctx.message) {
         const catId = ctx.session.editingCategoryId;
         if (catId) {
-            const categories = await productService.getAllCategories();
-            const cat = categories.find(c => c.id === catId);
-            if (cat) cat.name = ctx.message.text;
+            await productService.updateCategory(catId, ctx.message.text);
             ctx.session.state = undefined;
             ctx.session.editingCategoryId = undefined;
             return ctx.reply('✅ Turkum nomi yangilandi!', Markup.keyboard([]));
