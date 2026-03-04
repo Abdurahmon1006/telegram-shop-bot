@@ -10,9 +10,11 @@ import config from './config';
 
 const productService = new ProductService();
 const adminService = new AdminService();
+const cartService = new CartService();
+const orderService = new OrderService();
 
 interface MySession {
-    state?: 'awaiting_name' | 'awaiting_phone' | 'admin_awaiting_product_name' | 'admin_awaiting_product_price' | 'admin_awaiting_product_category' | 'admin_awaiting_category_name' | 'admin_awaiting_edit_product_price' | 'admin_awaiting_edit_product_name' | 'admin_awaiting_edit_product_description' | 'admin_awaiting_edit_product_unit' | 'admin_awaiting_address' | 'admin_awaiting_contact' | 'admin_awaiting_edit_category_name' | 'admin_awaiting_product_image' | 'admin_awaiting_shop_address' | 'admin_auth' | 'admin_awaiting_password';
+    state?: string;
     name?: string;
     phone?: string;
     newProduct?: Partial<{ name: string; price: number; categoryId: string; description: string; stock: number; imageUrl?: string; unit?: string }>;
@@ -48,26 +50,26 @@ bot.hears('📍 Bizning manzil', async (ctx) => {
 });
 
 bot.command('admin', async (ctx) => {
-    if (!ctx.session) ctx.session = {};
+    if (!ctx.session) ctx.session = {} as MySession;
     ctx.session.state = 'admin_awaiting_password';
     await ctx.reply('🔐 Admin parolini kiriting:');
 });
 
 bot.command('panel', async (ctx) => {
-    if (!ctx.session) ctx.session = {};
+    if (!ctx.session) ctx.session = {} as MySession;
     ctx.session.state = 'admin_awaiting_password';
     await ctx.reply('🔐 Admin parolini kiriting:');
 });
 
 bot.command('login', async (ctx) => {
-    if (!ctx.session) ctx.session = {};
+    if (!ctx.session) ctx.session = {} as MySession;
     ctx.session.state = 'admin_awaiting_password';
     await ctx.reply('🔐 Admin parolini kiriting:');
 });
 
 // Handle text messages for order flow and admin product adding
 bot.on('message', async (ctx, next) => {
-    if (!ctx.session) ctx.session = {};
+    if (!ctx.session) ctx.session = {} as MySession;
 
     // Admin password check
     if (ctx.session.state === 'admin_awaiting_password' && 'text' in ctx.message) {
@@ -87,16 +89,29 @@ bot.on('message', async (ctx, next) => {
         if (!adminService.isWorkDay()) {
             return ctx.reply('❌ Kechirasiz, bugun bizda dam olish kuni. Buyurtmalarni ish kunlari qabul qilamiz.', mainKeyboard);
         }
-        ctx.session.name = ctx.message.text;
+        
+        // Validate name - only letters allowed
+        const name = ctx.message.text.trim();
+        const nameRegex = /^[a-zA-Zа-яА-ЯёЁ\s]+$/;
+        if (!nameRegex.test(name)) {
+            return ctx.reply('❌ Iltimos, faqat harflardan foydalaning:');
+        }
+        
+        ctx.session.name = name;
         ctx.session.state = 'awaiting_phone';
         return ctx.reply('📞 Telefon raqamingizni kiriting (namuna: +998901234567):');
     }
     if (ctx.session.state === 'awaiting_phone' && 'text' in ctx.message) {
+        const phoneNumber = ctx.message.text.trim();
+        
+        // Validate phone - only numbers allowed (with + prefix)
+        const phoneRegex = /^\+?[0-9]+$/;
+        if (!phoneRegex.test(phoneNumber)) {
+            return ctx.reply('❌ Iltimos, faqat raqamlardan foydalaning:');
+        }
+        
         const userId = ctx.from!.id.toString();
-        const phoneNumber = ctx.message.text;
         const customerName = ctx.session.name;
-        const cartService = new (require('./services/cartService').CartService)();
-        const orderService = new (require('./services/orderService').OrderService)();
         const cartItems = cartService.getCartItems(Number(userId));
         
         // Get fresh prices from products and calculate total
@@ -109,14 +124,9 @@ bot.on('message', async (ctx, next) => {
         }
         
         orderService.placeOrder(userId, cartItems, totalPrice, customerName, phoneNumber);
-        
-        for (const item of cartItems) {
-            await productService.updateStock(item.productId, -item.quantity);
-        }
-        
         cartService.clearCart(Number(userId));
         ctx.session.state = undefined;
-        return ctx.reply('✅ Rahmat! Buyurtmangiz qabul qilindi.\nZaxiradan mahsulotlar ayrildi.\nTez orada xodimlarimiz siz bilan bog\'lanadi.', mainKeyboard);
+        return ctx.reply('✅ Rahmat! Buyurtmangiz qabul qilindi.\nTez orada xodimlarimiz siz bilan bog\'lanadi.', mainKeyboard);
     }
 
     // Admin Add Product Flow
@@ -193,7 +203,7 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { price });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot narxi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Mahsulot narxi yangilandi!', Markup.keyboard([]));
         }
     }
 
@@ -203,7 +213,7 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { name: ctx.message.text });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot nomi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Mahsulot nomi yangilandi!', Markup.keyboard([]));
         }
     }
 
@@ -213,7 +223,7 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { description: ctx.message.text });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot tavsifi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Mahsulot tavsifi yangilandi!', Markup.keyboard([]));
         }
     }
 
@@ -223,7 +233,7 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { unit: ctx.message.text });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot birligi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Mahsulot birligi yangilandi!', Markup.keyboard([]));
         }
     }
 
@@ -234,29 +244,28 @@ bot.on('message', async (ctx, next) => {
             await productService.updateProduct(productId, { imageUrl: photo.file_id });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            return ctx.reply('✅ Mahsulot rasmi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Mahsulot rasmi yangilandi!', Markup.keyboard([]));
         }
     }
 
     if (ctx.session.state === 'admin_awaiting_address' && 'text' in ctx.message) {
-        const contactInfo = adminService.getContactInfo();
-        adminService.updateContactInfo({ phone: (contactInfo as any).phone, username: ctx.message.text } as any);
+        const contactInfo = adminService.getContactInfo() as any;
+        adminService.updateContactInfo({ phone: contactInfo.phone, username: ctx.message.text });
         ctx.session.state = undefined;
-        return ctx.reply('✅ Username yangilandi!', adminCommands.showAdminPanel as any);
+        return ctx.reply('✅ Username yangilandi!', Markup.keyboard([]));
     }
 
     if (ctx.session.state === 'admin_awaiting_contact' && 'text' in ctx.message) {
         const contactInfo = adminService.getContactInfo() as any;
         adminService.updateContactInfo({ phone: ctx.message.text, username: contactInfo.username });
         ctx.session.state = undefined;
-        return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', adminCommands.showAdminPanel as any);
+        return ctx.reply('✅ Aloqa ma\'lumotlari yangilandi!', Markup.keyboard([]));
     }
 
     if (ctx.session.state === 'admin_awaiting_shop_address' && 'text' in ctx.message) {
-        const contactInfo = adminService.getContactInfo() as any;
         adminService.updateContactInfo({ address: ctx.message.text });
         ctx.session.state = undefined;
-        return ctx.reply('✅ Manzil yangilandi!', adminCommands.showAdminPanel as any);
+        return ctx.reply('✅ Manzil yangilandi!', Markup.keyboard([]));
     }
 
     if (ctx.session.state === 'admin_awaiting_edit_category_name' && 'text' in ctx.message) {
@@ -267,7 +276,7 @@ bot.on('message', async (ctx, next) => {
             if (cat) cat.name = ctx.message.text;
             ctx.session.state = undefined;
             ctx.session.editingCategoryId = undefined;
-            return ctx.reply('✅ Turkum nomi yangilandi!', adminCommands.showAdminPanel as any);
+            return ctx.reply('✅ Turkum nomi yangilandi!', Markup.keyboard([]));
         }
     }
 
@@ -283,7 +292,7 @@ bot.on('message', async (ctx, next) => {
 });
 
 bot.on('callback_query', async (ctx) => {
-    if (!ctx.session) ctx.session = {};
+    if (!ctx.session) ctx.session = {} as MySession;
     const data = (ctx.callbackQuery as any).data;
     if (data.startsWith('add_') && !data.includes('product') && !data.includes('category')) {
         const parts = data.split('_');
@@ -292,6 +301,21 @@ bot.on('callback_query', async (ctx) => {
         const productId = parts[2];
         const product = await productService.getProductById(productId);
         if (product) {
+            const currentCart = cartService.getCartItems(ctx.from!.id);
+            const existingItem = currentCart.find(item => item.productId === productId);
+            const currentQty = existingItem ? existingItem.quantity : 0;
+            
+            // Check stock limit
+            if (currentQty + qty > product.stock) {
+                const available = product.stock - currentQty;
+                if (available <= 0) {
+                    await ctx.answerCbQuery(`❌ Omborda yetarli mahsulot yoq!`);
+                    return;
+                }
+                await ctx.answerCbQuery(`❌ Faqat ${available} ${product.unit} qoshish mumkin!`);
+                return;
+            }
+            
             const cartItem = {
                 productId: product.id,
                 productName: product.name,
@@ -300,31 +324,35 @@ bot.on('callback_query', async (ctx) => {
                 unit: product.unit
             };
             const userId = ctx.from!.id;
-            const cartService = new (require('./services/cartService').CartService)();
             cartService.addItem(userId, cartItem);
-            await ctx.answerCbQuery(`✅ ${product.name} savatchaga qo'shildi!`);
-            await ctx.reply(`✅ ${product.name} savatchaga qo'shildi!`);
+            await ctx.answerCbQuery(`✅ ${product.name} savatchaga qoshildi!`);
+            await ctx.reply(`✅ ${product.name} (${qty} ${product.unit}) savatchaga qoshildi!`);
         }
     } else if (data.startsWith('cart_inc_')) {
         const productId = data.split('_')[2];
-        const cartService = new (require('./services/cartService').CartService)();
+        const product = await productService.getProductById(productId);
+        const currentCart = cartService.getCartItems(ctx.from!.id);
+        const existingItem = currentCart.find(item => item.productId === productId);
+        
+        if (product && existingItem && existingItem.quantity >= product.stock) {
+            await ctx.answerCbQuery(`❌ Omborda yetarli mahsulot yoq!`);
+            return;
+        }
+        
         cartService.updateItemQuantity(ctx.from!.id, productId, 1);
         await userCommands.viewCart(ctx);
         await ctx.answerCbQuery();
     } else if (data.startsWith('cart_dec_')) {
         const productId = data.split('_')[2];
-        const cartService = new (require('./services/cartService').CartService)();
         cartService.updateItemQuantity(ctx.from!.id, productId, -1);
         await userCommands.viewCart(ctx);
         await ctx.answerCbQuery();
     } else if (data.startsWith('cart_del_')) {
         const productId = data.split('_')[2];
-        const cartService = new (require('./services/cartService').CartService)();
         cartService.removeItem(ctx.from!.id, productId);
         await userCommands.viewCart(ctx);
-        await ctx.answerCbQuery('O\'chirildi');
+        await ctx.answerCbQuery('Ochirildi');
     } else if (data === 'clear_cart') {
-        const cartService = new (require('./services/cartService').CartService)();
         cartService.clearCart(ctx.from!.id);
         await ctx.reply('Savat tozalandi');
         await ctx.answerCbQuery();
@@ -332,11 +360,11 @@ bot.on('callback_query', async (ctx) => {
         const catId = data.split('_')[1];
         const products = await productService.getProductsByCategory(catId);
         if (products.length === 0) {
-            await ctx.reply('Ushbu turkumda mahsulotlar yo\'q.');
+            await ctx.reply('Ushbu turkumda mahsulotlar yoq.');
         } else {
             for (const product of products) {
-                const stockStatus = product.stock > 0 ? `✅ Ombor: ${product.stock} ${product.unit}` : '❌ Sotuvda yo\'q';
-                const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} so'm\nBirlik: ${product.unit}\n${stockStatus}`;
+                const stockStatus = product.stock > 0 ? `✅ Ombor: ${product.stock} ${product.unit}` : '❌ Sotuvda yoq';
+                const caption = `${product.name}\n\n${product.description}\n\nNarxi: ${product.price} som\nBirlik: ${product.unit}\n${stockStatus}`;
                 
                 if (product.imageUrl) {
                     await ctx.replyWithPhoto(product.imageUrl, {
@@ -364,14 +392,14 @@ bot.on('callback_query', async (ctx) => {
         ctx.session.newProduct = undefined;
         await ctx.answerCbQuery();
     } else if (data === 'add_product') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'admin_awaiting_product_name';
         await ctx.answerCbQuery();
         await ctx.reply('📝 Tovar nomini kiriting:');
     } else if (data === 'edit_product') {
         const products = await productService.getAllProducts();
         if (products.length === 0) {
-            await ctx.answerCbQuery('Mahsulotlar yo\'q');
+            await ctx.answerCbQuery('Mahsulotlar yoq');
             return;
         }
         const buttons = products.map(p => [Markup.button.callback(p.name, `admin_edit_p_${p.id}`)]);
@@ -379,7 +407,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data.startsWith('admin_edit_p_')) {
         const productId = data.split('_')[3];
-        ctx.session = ctx.session || {};
+        ctx.session = ctx.session || {} as MySession;
         ctx.session.editingProductId = productId;
         const buttons = [
             [Markup.button.callback('📝 Nomini tahrirlash', `edit_field_name_${productId}`)],
@@ -409,7 +437,7 @@ bot.on('callback_query', async (ctx) => {
             await ctx.reply('📄 Yangi tavsifni kiriting:');
         } else if (field === 'unit') {
             ctx.session.state = 'admin_awaiting_edit_product_unit';
-            await ctx.reply('📏 Yangi o\'lchov birligini kiriting (masalan: kg, dona, litr, qop):');
+            await ctx.reply('📏 Yangi olchov birligini kiriting (masalan: kg, dona, litr, qop):');
         } else if (field === 'image') {
             ctx.session.state = 'admin_awaiting_edit_product_image';
             await ctx.reply('🖼 Yangi rasmni yuboring:');
@@ -426,24 +454,24 @@ bot.on('callback_query', async (ctx) => {
             await productService.updateProduct(productId, { categoryId: catId });
             ctx.session.state = undefined;
             ctx.session.editingProductId = undefined;
-            await ctx.reply('✅ Mahsulot turkumi yangilandi!', adminCommands.showAdminPanel as any);
+            await ctx.reply('✅ Mahsulot turkumi yangilandi!', Markup.keyboard([]));
         }
         await ctx.answerCbQuery();
     } else if (data === 'delete_product') {
         const products = await productService.getAllProducts();
         if (products.length === 0) {
-            await ctx.answerCbQuery('Mahsulotlar yo\'q');
+            await ctx.answerCbQuery('Mahsulotlar yoq');
             return;
         }
         const buttons = products.map(p => [Markup.button.callback(p.name, `admin_del_p_${p.id}`)]);
         buttons.push([Markup.button.callback('🔙 Bekor qilish', 'cancel_delete')]);
-        await ctx.reply('O\'chirish uchun mahsulotni tanlang:', Markup.inlineKeyboard(buttons));
+        await ctx.reply('Ochirish uchun mahsulotni tanlang:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data.startsWith('admin_del_p_')) {
         const productId = data.split('_')[3];
         const success = await productService.deleteProduct(productId);
         if (success) {
-            await ctx.reply('✅ Mahsulot o\'chirildi!');
+            await ctx.reply('✅ Mahsulot ochirildi!');
         } else {
             await ctx.reply('❌ Mahsulot topilmadi!');
         }
@@ -453,17 +481,57 @@ bot.on('callback_query', async (ctx) => {
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'view_orders') {
-        await adminCommands.viewOrders(ctx);
+        const orders = orderService.getAllOrders();
+        if (orders.length === 0) {
+            await ctx.reply('📦 Hozircha buyurtmalar yoq!');
+            await ctx.answerCbQuery();
+            return;
+        }
+        
+        for (const order of orders) {
+            const statusButtons = [
+                [Markup.button.callback('📞 Aloqaga chiqish', `order_contact_${order.id}`)],
+                [Markup.button.callback('✅ Bajarildi', `order_complete_${order.id}`)],
+                [Markup.button.callback('❌ Bekor qilish', `order_cancel_${order.id}`)]
+            ];
+            const itemsList = order.items.map(item => `- ${item.productName}: ${item.quantity} ${item.unit}`).join('\n');
+            await ctx.reply(
+                `📦 Buyurtma #${order.id}\n` +
+                `Mijoz: ${order.customerName || 'Nomalsum'}\n` +
+                `Telefon: ${order.customerPhone || 'Nomalsum'}\n` +
+                `Summa: ${order.totalPrice} som\n` +
+                `Status: ${order.status}\n\n` +
+                `Mahsulotlar:\n${itemsList}`,
+                Markup.inlineKeyboard(statusButtons)
+            );
+        }
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('order_contact_')) {
+        const orderId = data.split('_')[2];
+        const order = orderService.getAllOrders().find(o => o.id === orderId);
+        if (order) {
+            await ctx.reply(`📞 Mijoz bilan boglanish uchun: ${order.customerPhone || 'Raqam yoq'}`);
+        }
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('order_complete_')) {
+        const orderId = data.split('_')[2];
+        orderService.updateOrderStatus(orderId, 'completed');
+        await ctx.reply('✅ Buyurtma bajarildi deb belgilandi!');
+        await ctx.answerCbQuery();
+    } else if (data.startsWith('order_cancel_')) {
+        const orderId = data.split('_')[2];
+        orderService.updateOrderStatus(orderId, 'canceled');
+        await ctx.reply('❌ Buyurtma bekor qilindi!');
         await ctx.answerCbQuery();
     } else if (data === 'view_statistics') {
         await adminCommands.viewStatistics(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'manage_categories') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         const buttons = [
             [Markup.button.callback('➕ Yangi turkum', 'add_category')],
             [Markup.button.callback('✏️ Tahrirlash', 'edit_category')],
-            [Markup.button.callback('❌ O\'chirish', 'delete_category')],
+            [Markup.button.callback('❌ Ochirish', 'delete_category')],
             [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
         ];
         await ctx.reply('Turkumlarni boshqarish:', Markup.inlineKeyboard(buttons));
@@ -482,25 +550,25 @@ bot.on('callback_query', async (ctx) => {
     } else if (data === 'delete_category') {
         const categories = await productService.getAllCategories();
         const buttons = categories.map(cat => [Markup.button.callback(cat.name, `admin_del_cat_${cat.id}`)]);
-        await ctx.reply('O\'chirish uchun turkumni tanlang:', Markup.inlineKeyboard(buttons));
+        await ctx.reply('Ochirish uchun turkumni tanlang:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data.startsWith('admin_del_cat_')) {
         const catId = data.split('_')[3];
         await productService.deleteCategory(catId);
-        await ctx.reply('✅ Turkum o\'chirildi!');
+        await ctx.reply('✅ Turkum ochirildi!');
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'admin_contacts') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         const contactInfo = adminService.getContactInfo() as any;
         const buttons = [
             [Markup.button.callback('📍 Manzilni tahrirlash', 'edit_shop_address')],
-            [Markup.button.callback('👤 Username\'ni tahrirlash', 'edit_address')],
+            [Markup.button.callback('👤 Username ni tahrirlash', 'edit_address')],
             [Markup.button.callback('📞 Telefonni tahrirlash', 'edit_contact_info')],
             [Markup.button.callback('📅 Ish kunlarini sozlash', 'manage_work_days')],
             [Markup.button.callback('🔙 Orqaga', 'back_to_admin')]
         ];
-        await ctx.reply(`📞 Aloqa ma'lumotlari:\n📍 Manzil: ${contactInfo.address || 'Kiritilmagan'}\n👤 Telegram: ${contactInfo.username}\n📞 Telefon: ${contactInfo.phone}\n\nSozlamalar:`, Markup.inlineKeyboard(buttons));
+        await ctx.reply(`📞 Aloqa malumotlari:\n📍 Manzil: ${contactInfo.address || 'Kiritilmagan'}\n👤 Telegram: ${contactInfo.username}\n📞 Telefon: ${contactInfo.phone}\n\nSozlamalar:`, Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'manage_work_days') {
         const days = adminService.getWorkDays();
@@ -530,7 +598,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.editMessageText('Ish kunlarini belgilang:', Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'admin_awaiting_address';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
@@ -538,7 +606,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('👤 Yangi Telegram username kiriting (masalan: @username):', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'edit_contact_info') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'admin_awaiting_contact';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
@@ -546,7 +614,7 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('📞 Yangi telefon raqamini kiriting (masalan: +998...):', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'edit_shop_address') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'admin_awaiting_shop_address';
         const keyboard = Markup.inlineKeyboard([
             [Markup.button.callback('🔙 Bekor qilish', 'back_to_admin')]
@@ -554,17 +622,17 @@ bot.on('callback_query', async (ctx) => {
         await ctx.reply('📍 Yangi manzilni kiriting:', keyboard);
         await ctx.answerCbQuery();
     } else if (data === 'back_to_admin') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = undefined;
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();
     } else if (data === 'add_category') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'admin_awaiting_category_name';
         await ctx.reply('📝 Yangi turkum nomini kiriting:');
         await ctx.answerCbQuery();
     } else if (data === 'checkout') {
-        if (!ctx.session) ctx.session = {};
+        if (!ctx.session) ctx.session = {} as MySession;
         ctx.session.state = 'awaiting_name';
         await ctx.answerCbQuery();
         await ctx.reply('📦 Buyurtma berish uchun ismingizni kiriting:');

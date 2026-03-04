@@ -1,15 +1,8 @@
 import { Product, Category } from '../models/product';
 
-const sampleCategories: Category[] = [
-    { id: '1', name: 'Mevalar' },
-    { id: '2', name: 'Sabzavotlar' },
-];
+const sampleCategories: Category[] = [];
 
-const sampleProducts: Product[] = [
-    { id: '1', name: 'Olma', description: 'Yangi olma', price: 15000, unit: 'kg', stock: 100, categoryId: '1' },
-    { id: '2', name: 'Banan', description: 'Import banan', price: 25000, unit: 'kg', stock: 50, categoryId: '1' },
-    { id: '3', name: 'Uzum', description: 'Mahalliy uzum', price: 20000, unit: 'kg', stock: 75, categoryId: '1' },
-];
+const sampleProducts: Product[] = [];
 
 export class ProductService {
     private static products: Product[] = [...sampleProducts];

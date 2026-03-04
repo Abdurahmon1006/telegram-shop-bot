@@ -1,41 +1,90 @@
 import { Admin } from '../models/admin';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface AdminData {
+    workDays: number[];
+    contactInfo: {
+        phone: string;
+        username: string;
+        address: string;
+    };
+    adminPassword: string;
+}
+
+const DATA_FILE = path.join(__dirname, '../../data/admin.json');
+
+function ensureDataDir() {
+    const dir = path.dirname(DATA_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+}
+
+function loadAdminData(): AdminData {
+    ensureDataDir();
+    if (fs.existsSync(DATA_FILE)) {
+        try {
+            const data = fs.readFileSync(DATA_FILE, 'utf-8');
+            return JSON.parse(data);
+        } catch {
+            return getDefaultData();
+        }
+    }
+    return getDefaultData();
+}
+
+function saveAdminData(data: AdminData) {
+    ensureDataDir();
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+function getDefaultData(): AdminData {
+    return {
+        workDays: [1, 2, 3, 4, 5, 6],
+        contactInfo: {
+            phone: '+998901234567',
+            username: '@shop_admin',
+            address: 'Manzil kiritilmagan'
+        },
+        adminPassword: 'admin123'
+    };
+}
 
 export class AdminService {
-    private static workDays = [1, 2, 3, 4, 5, 6];
-    private static contactInfo = {
-        phone: '+998901234567',
-        username: '@shop_admin',
-        address: 'Manzil kiritilmagan'
-    };
-    private static adminPassword = 'admin123';
+    private static data: AdminData = loadAdminData();
 
     getWorkDays() {
-        return AdminService.workDays;
+        return AdminService.data.workDays;
     }
 
     setWorkDays(days: number[]) {
-        AdminService.workDays = days;
+        AdminService.data.workDays = days;
+        saveAdminData(AdminService.data);
     }
 
     isWorkDay(date: Date = new Date()) {
-        return AdminService.workDays.includes(date.getDay());
+        return AdminService.data.workDays.includes(date.getDay());
     }
+    
     private admins: Admin[] = [];
 
     getContactInfo() {
-        return AdminService.contactInfo;
+        return AdminService.data.contactInfo;
     }
 
     updateContactInfo(data: { phone?: string; username?: string; address?: string }) {
-        AdminService.contactInfo = { ...AdminService.contactInfo, ...data };
+        AdminService.data.contactInfo = { ...AdminService.data.contactInfo, ...data };
+        saveAdminData(AdminService.data);
     }
 
     setAdminPassword(password: string) {
-        AdminService.adminPassword = password;
+        AdminService.data.adminPassword = password;
+        saveAdminData(AdminService.data);
     }
 
     checkAdminPassword(password: string): boolean {
-        return password === AdminService.adminPassword;
+        return password === AdminService.data.adminPassword;
     }
 
     async addAdmin(name: string, telegramId: string): Promise<Admin> {
@@ -66,9 +115,17 @@ export class AdminService {
         const products = await productService.getAllProducts();
         const orders = require('./orderService').OrderService.getOrders();
         const totalRevenue = require('./orderService').OrderService.getTotalRevenue();
+        
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        const completedOrders = orders.filter(o => o.status === 'completed').length;
+        const canceledOrders = orders.filter(o => o.status === 'canceled').length;
+        
         return `📊 Statistika:
 - Jami mahsulotlar: ${products.length} ta
 - Jami buyurtmalar: ${orders.length} ta
+- Bajarilgan: ${completedOrders} ta
+- Kutilayotgan: ${pendingOrders} ta
+- Bekor qilingan: ${canceledOrders} ta
 - Jami daromad: ${totalRevenue} so'm`;
     }
 
