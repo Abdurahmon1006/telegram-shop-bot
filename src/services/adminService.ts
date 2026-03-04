@@ -12,6 +12,11 @@ interface AdminData {
     adminPassword: string;
 }
 
+interface Order {
+    status: string;
+    totalPrice?: number;
+}
+
 const DATA_FILE = path.join(__dirname, '../../data/admin.json');
 
 function ensureDataDir() {
@@ -51,34 +56,44 @@ function getDefaultData(): AdminData {
     };
 }
 
+interface ProductData {
+    name?: string;
+    description?: string;
+    price?: number;
+    unit?: string;
+    stock?: number;
+    categoryId?: string;
+    imageUrl?: string;
+}
+
 export class AdminService {
     private static data: AdminData = loadAdminData();
 
-    getWorkDays() {
+    getWorkDays(): number[] {
         return AdminService.data.workDays;
     }
 
-    setWorkDays(days: number[]) {
+    setWorkDays(days: number[]): void {
         AdminService.data.workDays = days;
         saveAdminData(AdminService.data);
     }
 
-    isWorkDay(date: Date = new Date()) {
+    isWorkDay(date: Date = new Date()): boolean {
         return AdminService.data.workDays.includes(date.getDay());
     }
     
     private admins: Admin[] = [];
 
-    getContactInfo() {
+    getContactInfo(): { phone: string; username: string; address: string } {
         return AdminService.data.contactInfo;
     }
 
-    updateContactInfo(data: { phone?: string; username?: string; address?: string }) {
+    updateContactInfo(data: { phone?: string; username?: string; address?: string }): void {
         AdminService.data.contactInfo = { ...AdminService.data.contactInfo, ...data };
         saveAdminData(AdminService.data);
     }
 
-    setAdminPassword(password: string) {
+    setAdminPassword(password: string): void {
         AdminService.data.adminPassword = password;
         saveAdminData(AdminService.data);
     }
@@ -111,14 +126,16 @@ export class AdminService {
     }
 
     async getStatistics(): Promise<string> {
-        const productService = new (require('./productService').ProductService)();
+        const { ProductService } = await import('./productService');
+        const productService = new ProductService();
         const products = await productService.getAllProducts();
-        const orders: Array<{status: string}> = require('./orderService').OrderService.getOrders();
-        const totalRevenue = require('./orderService').OrderService.getTotalRevenue();
+        const { OrderService } = await import('./orderService');
+        const orders = OrderService.getOrders();
+        const totalRevenue = OrderService.getTotalRevenue();
         
-        const pendingOrders = orders.filter((o: {status: string}) => o.status === 'pending').length;
-        const completedOrders = orders.filter((o: {status: string}) => o.status === 'completed').length;
-        const canceledOrders = orders.filter((o: {status: string}) => o.status === 'canceled').length;
+        const pendingOrders = orders.filter((o: Order) => o.status === 'pending').length;
+        const completedOrders = orders.filter((o: Order) => o.status === 'completed').length;
+        const canceledOrders = orders.filter((o: Order) => o.status === 'canceled').length;
         
         return `📊 Statistika:
 - Jami mahsulotlar: ${products.length} ta
@@ -133,13 +150,14 @@ export class AdminService {
         return 'Foydalanuvchilar: 0';
     }
 
-    async addProduct(productData: any): Promise<{ message: string }> {
-        const productService = new (require('./productService').ProductService)();
+    async addProduct(productData: ProductData): Promise<{ message: string }> {
+        const { ProductService } = await import('./productService');
+        const productService = new ProductService();
         await productService.addProduct(productData);
         return { message: '✅ Tovar muvaffaqiyatli qo\'shildi!' };
     }
 
-    async editProduct(productId: string, updatedData: any): Promise<{ message: string }> {
+    async editProduct(productId: string, updatedData: ProductData): Promise<{ message: string }> {
         return { message: 'Tovar tahrirlandi' };
     }
 

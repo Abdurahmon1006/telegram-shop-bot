@@ -288,9 +288,13 @@ bot.on('message', async (ctx, next) => {
     }
 
     if (ctx.session.state === 'admin_awaiting_category_name' && 'text' in ctx.message) {
-        await productService.addCategory(ctx.message.text);
-        ctx.session.state = undefined;
-        return ctx.reply('✅ Yangi turkum qo\'shildi!');
+        try {
+            await productService.addCategory(ctx.message.text);
+            ctx.session.state = undefined;
+            return ctx.reply('✅ Yangi turkum qo\'shildi!');
+        } catch (error: any) {
+            return ctx.reply(`❌ ${error.message || 'Xatolik yuz berdi'}`);
+        }
     }
 
     if (ctx.session.state === 'admin_awaiting_edit_product_price' && 'text' in ctx.message) {
@@ -653,6 +657,11 @@ bot.on('callback_query', async (ctx) => {
     } else if (data.startsWith('admin_del_cat_')) {
         const catId = data.split('_')[3];
         await productService.deleteCategory(catId);
+        const products = await productService.getAllProducts();
+        const productsInCategory = products.filter(p => p.categoryId === catId);
+        const remainingCategories = await productService.getAllCategories();
+        const defaultCatId = remainingCategories.find(c => c.id !== catId)?.id || "1";
+        for (const product of productsInCategory) { await productService.updateProduct(product.id, { categoryId: defaultCatId }); }
         await ctx.reply('✅ Turkum ochirildi!');
         await adminCommands.showAdminPanel(ctx);
         await ctx.answerCbQuery();

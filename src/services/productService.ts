@@ -85,6 +85,11 @@ export class ProductService {
     }
 
     async addCategory(name: string): Promise<Category> {
+        // Check if category already exists
+        const existingCategory = ProductService.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (existingCategory) {
+            throw new Error('Bu turkum allaqachon mavjud!');
+        }
         const newCategory = { id: (ProductService.categories.length + 1).toString(), name };
         ProductService.categories.push(newCategory);
         saveCategories(ProductService.categories);
