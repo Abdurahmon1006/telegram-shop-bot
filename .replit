@@ -1,9 +1,10 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "python-3.11"]
 [agent]
 expertMode = true
 
 [nix]
 channel = "stable-25_05"
+packages = ["telegraf"]
 
 [workflows]
 runButton = "Project"
@@ -27,3 +28,12 @@ args = "npm run start"
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "start"
+mode = "sequential"
+author = 53834253
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
