@@ -87,7 +87,10 @@ bot.on('message', async (ctx, next) => {
 
     if (ctx.session.state === 'awaiting_name' && 'text' in ctx.message) {
         if (!adminService.isWorkDay()) {
-            return ctx.reply('❌ Kechirasiz, bugun bizda dam olish kuni. Buyurtmalarni ish kunlari qabul qilamiz.', mainKeyboard);
+            const workDays = adminService.getWorkDays();
+            const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+            const workDaysText = workDays.map(d => weekDays[d]).join(', ');
+            return ctx.reply(`❌ Kechirasiz, bugun bizda dam olish kuni.\n\n📅 Ish kunlari: ${workDaysText}\n\nBuyurtmalarni ish kunlari qabul qilamiz.`, mainKeyboard);
         }
         
         // Validate name - only letters allowed
@@ -571,12 +574,34 @@ bot.on('callback_query', async (ctx) => {
     } else if (data === 'manage_work_days') {
         const days = adminService.getWorkDays();
         const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+        const today = new Date().getDay();
+        
+        let calendarText = '📅 Ish kunlari va dam olish kunlari:\n\n';
+        calendarText += '🟢 Ish kuni  |  🔴 Dam olish kuni\n';
+        calendarText += '━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        
+        weekDays.forEach((name, index) => {
+            const isWorkDay = days.includes(index);
+            const isToday = index === today;
+            const todayMarker = isToday ? ' 🔸 (bugun)' : '';
+            if (isWorkDay) {
+                calendarText += `🟢 ${name}${todayMarker}\n`;
+            } else {
+                calendarText += `🔴 ${name}${todayMarker}\n`;
+            }
+        });
+        
+        calendarText += '\n━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        calendarText += '👇 Kunlarni tanlash uchun bosing:\n';
+        
         const buttons = weekDays.map((name, index) => {
             const isActive = days.includes(index);
-            return [Markup.button.callback(`${isActive ? '✅' : '❌'} ${name}`, `toggle_day_${index}`)];
+            const emoji = isActive ? '🟢' : '🔴';
+            return [Markup.button.callback(`${emoji} ${name}`, `toggle_day_${index}`)];
         });
         buttons.push([Markup.button.callback('🔙 Orqaga', 'admin_contacts')]);
-        await ctx.reply('Ish kunlarini belgilang:', Markup.inlineKeyboard(buttons));
+        
+        await ctx.reply(calendarText, Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data.startsWith('toggle_day_')) {
         const day = parseInt(data.split('_')[2]);
@@ -587,13 +612,36 @@ bot.on('callback_query', async (ctx) => {
             days.push(day);
         }
         adminService.setWorkDays(days);
+        
         const weekDays = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+        const today = new Date().getDay();
+        
+        let calendarText = '📅 Ish kunlari va dam olish kunlari:\n\n';
+        calendarText += '🟢 Ish kuni  |  🔴 Dam olish kuni\n';
+        calendarText += '━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        
+        weekDays.forEach((name, index) => {
+            const isWorkDay = days.includes(index);
+            const isToday = index === today;
+            const todayMarker = isToday ? ' 🔸 (bugun)' : '';
+            if (isWorkDay) {
+                calendarText += `🟢 ${name}${todayMarker}\n`;
+            } else {
+                calendarText += `🔴 ${name}${todayMarker}\n`;
+            }
+        });
+        
+        calendarText += '\n━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        calendarText += '👇 Kunlarni tanlash uchun bosing:\n';
+        
         const buttons = weekDays.map((name, index) => {
             const isActive = days.includes(index);
-            return [Markup.button.callback(`${isActive ? '✅' : '❌'} ${name}`, `toggle_day_${index}`)];
+            const emoji = isActive ? '🟢' : '🔴';
+            return [Markup.button.callback(`${emoji} ${name}`, `toggle_day_${index}`)];
         });
         buttons.push([Markup.button.callback('🔙 Orqaga', 'admin_contacts')]);
-        await ctx.editMessageText('Ish kunlarini belgilang:', Markup.inlineKeyboard(buttons));
+        
+        await ctx.editMessageText(calendarText, Markup.inlineKeyboard(buttons));
         await ctx.answerCbQuery();
     } else if (data === 'edit_address') {
         if (!ctx.session) ctx.session = {} as MySession;
