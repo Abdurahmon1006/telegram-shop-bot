@@ -15,6 +15,10 @@ export const adminKeyboard = Markup.inlineKeyboard([
     ],
     [
         Markup.button.callback('📊 Statistika', 'view_statistics'),
+        Markup.button.callback('📥 Excel dan import', 'import_excel'),
+    ],
+    [
+        Markup.button.callback('📤 Excel shablon', 'get_template'),
         Markup.button.callback('🔙 Orqaga', 'back_to_main'),
     ],
 ]);

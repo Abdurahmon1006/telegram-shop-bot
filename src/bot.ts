@@ -5,6 +5,7 @@ import { ProductService } from './services/productService';
 import { CartService } from './services/cartService';
 import { OrderService } from './services/orderService';
 import { AdminService } from './services/adminService';
+import { ImportService } from './services/importService';
 import { productKeyboard } from './keyboards/productKeyboard';
 import config from './config';
 
@@ -12,6 +13,7 @@ const productService = new ProductService();
 const adminService = new AdminService();
 const cartService = new CartService();
 const orderService = new OrderService();
+const importService = new ImportService();
 
 interface MySession {
     state?: string;
@@ -67,11 +69,48 @@ bot.command('login', async (ctx) => {
     await ctx.reply('🔐 Admin parolini kiriting:');
 });
 
+// Excel import command
+bot.command('import', async (ctx) => {
+    if (!ctx.session) ctx.session = {} as MySession;
+    
+    // Check if user is admin
+    if (!ctx.session.isAdminAuthenticated) {
+        ctx.session.state = 'admin_awaiting_password_for_import';
+        return ctx.reply('🔐 Excel faylni yuklash uchun admin parolini kiriting:');
+    }
+    
+    await ctx.reply('📤 Excel faylni yuboring (.xlsx yoki .xls formatda)\n\n' +
+        'Excel fayl quyidagi ustunlarni o\'z ichiga olishi kerak:\n' +
+        '• name - mahsulot nomi (majburiy)\n' +
+        '• description - tavsif (ixtiyoriy)\n' +
+        '• price - narx (majburiy)\n' +
+        '• unit - birlik (kg, dona, litr...) (ixtiyoriy)\n' +
+        '• stock - ombor soni (ixtiyoriy)\n' +
+        '• category - turkum nomi (ixtiyoriy)');
+});
+
+// Template download command
+bot.command('template', async (ctx) => {
+    if (!ctx.session) ctx.session = {} as MySession;
+    
+    if (!ctx.session.isAdminAuthenticated) {
+        return ctx.reply('❌ Bu buyruq faqat adminlar uchun!');
+    }
+    
+    const templateBuffer = importService.generateTemplate();
+    await ctx.replyWithDocument({
+        source: templateBuffer,
+        filename: 'mahsulotlar_template.xlsx'
+    }, {
+        caption: '📥 Excel shabloni. Ustunlarni to\'ldiring va /import buyrug\'i orqali yuklang.'
+    });
+});
+
 // Handle text messages for order flow and admin product adding
 bot.on('message', async (ctx, next) => {
     if (!ctx.session) ctx.session = {} as MySession;
 
-    // Admin password check
+// Admin password check
     if (ctx.session.state === 'admin_awaiting_password' && 'text' in ctx.message) {
         const password = ctx.message.text;
         if (adminService.checkAdminPassword(password)) {
@@ -81,6 +120,64 @@ bot.on('message', async (ctx, next) => {
         } else {
             ctx.session.state = undefined;
             await ctx.reply('❌ Noto\'g\'ri parol!', mainKeyboard);
+        }
+        return;
+    }
+
+    // Admin password check for import
+    if (ctx.session.state === 'admin_awaiting_password_for_import' && 'text' in ctx.message) {
+        const password = ctx.message.text;
+        if (adminService.checkAdminPassword(password)) {
+            ctx.session.isAdminAuthenticated = true;
+            ctx.session.state = 'awaiting_excel_file';
+            await ctx.reply('📤 Endi Excel faylni yuboring (.xlsx yoki .xls formatda)\n\n' +
+                'Excel fayl quyidagi ustunlarni o\'z ichiga olishi kerak:\n' +
+                '• name - mahsulot nomi (majburiy)\n' +
+                '• description - tavsif (ixtiyoriy)\n' +
+                '• price - narx (majburiy)\n' +
+                '• unit - birlik (kg, dona, litr...) (ixtiyoriy)\n' +
+                '• stock - ombor soni (ixtiyoriy)\n' +
+                '• category - turkum nomi (ixtiyoriy)');
+        } else {
+            ctx.session.state = undefined;
+            await ctx.reply('❌ Noto\'g\'ri parol!', mainKeyboard);
+        }
+        return;
+    }
+
+    // Handle Excel file upload
+    if (ctx.session.state === 'awaiting_excel_file') {
+        if ('document' in ctx.message) {
+            const document = ctx.message.document;
+            const fileName = document.file_name || '';
+            
+            // Check file extension
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                return ctx.reply('❌ Iltimos, faqat .xlsx yoki .xls formatdagi fayllarni yuklang!');
+            }
+            
+            try {
+                // Get file from Telegram
+                const file = await ctx.telegram.getFile(document.file_id);
+                const fileUrl = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`;
+                
+                // Download file content
+                const response = await fetch(fileUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                
+                // Import products
+                const result = await importService.importFromExcel(buffer);
+                await ctx.reply(result.message);
+                
+                ctx.session.state = undefined;
+            } catch (error) {
+                console.error('Excel import error:', error);
+                await ctx.reply('❌ Faylni o\'qishda xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.');
+                ctx.session.state = undefined;
+            }
+        } else {
+            return ctx.reply('❌ Iltimos, Excel faylni document sifatida yuboring!');
         }
         return;
     }
@@ -687,6 +784,35 @@ bot.on('callback_query', async (ctx) => {
         await ctx.answerCbQuery();
     } else if (data === 'back_to_main') {
         await ctx.reply('Asosiy menyu:', mainKeyboard);
+        await ctx.answerCbQuery();
+    } else if (data === 'import_excel') {
+        if (!ctx.session.isAdminAuthenticated) {
+            ctx.session.state = 'admin_awaiting_password_for_import';
+            await ctx.reply('🔐 Excel faylni yuklash uchun admin parolini kiriting:');
+        } else {
+            ctx.session.state = 'awaiting_excel_file';
+            await ctx.reply('📤 Excel faylni yuboring (.xlsx yoki .xls formatda)\n\n' +
+                'Excel fayl quyidagi ustunlarni o\'z ichiga olishi kerak:\n' +
+                '• name - mahsulot nomi (majburiy)\n' +
+                '• description - tavsif (ixtiyoriy)\n' +
+                '• price - narx (majburiy)\n' +
+                '• unit - birlik (kg, dona, litr...) (ixtiyoriy)\n' +
+                '• stock - ombor soni (ixtiyoriy)\n' +
+                '• category - turkum nomi (ixtiyoriy)');
+        }
+        await ctx.answerCbQuery();
+    } else if (data === 'get_template') {
+        if (!ctx.session.isAdminAuthenticated) {
+            await ctx.reply('❌ Bu buyruq faqat adminlar uchun!');
+        } else {
+            const templateBuffer = importService.generateTemplate();
+            await ctx.replyWithDocument({
+                source: templateBuffer,
+                filename: 'mahsulotlar_template.xlsx'
+            }, {
+                caption: '📥 Excel shabloni. Ustunlarni to\'ldiring va /import buyrug\'i orqali yuklang yoki "Excel dan import" tugmasini bosing.'
+            });
+        }
         await ctx.answerCbQuery();
     }
 });
